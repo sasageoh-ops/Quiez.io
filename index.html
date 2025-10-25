@@ -1,23 +1,23 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Kuis Kosakata dengan Waktu & Restart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Penyebutan Kosakata</title>
     
     <style>
-        /* PERUBAHAN UTAMA DI SINI UNTUK SENTRALISASI */
+        /* ======================================================= */
+        /* CSS UNTUK SENTRALISASI LAYAR (MENGGUNAKAN FLEXBOX) */
+        /* ======================================================= */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            
-            /* --- Flexbox untuk Sentralisasi --- */
             display: flex; /* Aktifkan Flexbox */
             flex-direction: column; 
             align-items: center; /* Pusatkan secara horizontal */
             justify-content: center; /* Pusatkan secara vertikal */
             min-height: 100vh; /* Pastikan body mengambil tinggi penuh layar */
-            margin: 0; /* Hapus margin default browser */
-            /* ---------------------------------- */
-            
+            margin: 0; 
             background-color: #e8f4f8;
             padding: 20px;
         }
@@ -28,11 +28,13 @@
             border-radius: 12px;
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
             width: 90%;
-            max-width: 500px; /* Batasi lebar maksimum untuk desktop */
+            max-width: 500px; /* Batasi lebar maksimum */
             text-align: center;
         }
-
-        /* Styling lainnya tetap sama */
+        
+        /* ======================================================= */
+        /* STYLING KOMPONEN KUIS */
+        /* ======================================================= */
         h1 {
             color: #007bff;
             margin-bottom: 5px;
@@ -63,7 +65,6 @@
             box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        /* Area Pilihan Ganda */
         #options-area {
             display: flex;
             flex-direction: column;
@@ -137,7 +138,6 @@
     
 </head>
 <body>
-    <script src="main.js"></script>
 
     <div class="quiz-container">
         <h1>Tes Penyebutan Kosakata</h1>
@@ -151,14 +151,15 @@
         <div id="question-box"></div>
         
         <div id="options-area">
-            </div>
+        </div>
 
         <p id="feedback"></p>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Data JSON Kosakata (10 Contoh)
-            const vocabularyData = [
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Data Kosakata (10 Contoh)
+        const vocabularyData = [
     { "id": 1, "english": "Accept", "pronunciation": "Ak-sep" },
     { "id": 2, "english": "Achieve", "pronunciation": "E-ciif" },
     { "id": 3, "english": "Add", "pronunciation": "Ed" },
@@ -1160,196 +1161,218 @@
     { "id": 998, "english": "Legitimize", "pronunciation": "Le-ji-ti-maiz" },
     { "id": 999, "english": "Leverage", "pronunciation": "Le-ve-rij" },
     { "id": 1000, "english": "Liquidate", "pronunciation": "Li-kwi-deit" }
-];
+]
 
 
 
 
+;
+        
+        // Variabel Status Kuis (Sama seperti sebelumnya)
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let shuffledQuizData = []; 
+        let userAnswers = [];
+        
+        let startTime;
+        let timerInterval;
+        
+        // Variabel DOM Utama
+        const quizContainer = document.querySelector('.quiz-container');
+        const questionBox = document.getElementById('question-box');
+        const optionsArea = document.getElementById('options-area');
+        const timerDisplay = document.getElementById('quiz-timer');
+        const counter = document.getElementById('question-counter');
+        
+        // =======================================================
+        // 🆕 FUNGSI BARU: FITUR SUARA (TEXT-TO-SPEECH)
+        // =======================================================
 
-            
-            // Variabel Status Kuis
-            let currentQuestionIndex = 0;
-            let score = 0;
-            let shuffledQuizData = []; 
-            let userAnswers = [];
-            
-            // Variabel Timer
-            let startTime;
-            let timerInterval;
-            
-            // 1. Variabel DOM Utama
-            const quizContainer = document.querySelector('.quiz-container');
-            const questionBox = document.getElementById('question-box');
-            const optionsArea = document.getElementById('options-area');
-            const timerDisplay = document.getElementById('quiz-timer');
-            const counter = document.getElementById('question-counter');
-            
-            // --- FUNGSI TIMER ---
-            function startTimer() {
-                startTime = Date.now();
-                timerInterval = setInterval(updateTimer, 1000);
-            }
-
-            function updateTimer() {
-                const elapsed = Date.now() - startTime;
-                const totalSeconds = Math.floor(elapsed / 1000);
-                const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-                const seconds = String(totalSeconds % 60).padStart(2, '0');
-                timerDisplay.textContent = `Waktu: ${minutes}:${seconds}`;
-            }
-
-            function stopTimer() {
-                clearInterval(timerInterval);
-                const totalElapsed = Date.now() - startTime;
-                return Math.floor(totalElapsed / 1000); 
-            }
-
-            // --- FUNGSI UTAMA: MEMUAT SOAL ---
-            function loadQuestion() {
-                if (currentQuestionIndex >= shuffledQuizData.length) {
-                    showResults();
-                    return;
-                }
-
-                const currentItem = shuffledQuizData[currentQuestionIndex];
-                optionsArea.innerHTML = '';
+        function speakText(text) {
+            // Cek apakah Web Speech API didukung oleh browser
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
                 
-                counter.textContent = `Soal ${currentQuestionIndex + 1} dari ${shuffledQuizData.length}`;
-                questionBox.textContent = currentItem.english;
+                // Opsional: Atur bahasa ke Bahasa Inggris
+                // Ini penting agar pengucapan terdengar natural English
+                utterance.lang = 'en-US'; 
                 
-                // Ambil distraktor (jawaban salah)
-                const incorrectOptions = vocabularyData
-                    .filter(item => item.id !== currentItem.id) 
-                    .sort(() => 0.5 - Math.random())
-                    .slice(0, 3) 
-                    .map(item => ({ text: item.pronunciation, correct: false }));
+                // Opsional: Atur kecepatan (default 1)
+                utterance.rate = 0.8; 
+                
+                // Minta browser untuk mengucapkan teks
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.warn("Web Speech API tidak didukung di browser ini.");
+            }
+        }
 
-                // Gabungkan dan acak
-                const allOptions = [
-                    ...incorrectOptions, 
-                    { text: currentItem.pronunciation, correct: true }
-                ];
-                allOptions.sort(() => 0.5 - Math.random());
+        // --- FUNGSI TIMER (Tidak Berubah) ---
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
 
-                // Tampilkan Pilihan
-                allOptions.forEach(option => {
-                    const button = document.createElement('button');
-                    button.className = 'option-button';
-                    button.textContent = option.text;
-                    button.setAttribute('data-correct', option.correct);
-                    button.addEventListener('click', checkAnswer);
-                    optionsArea.appendChild(button);
-                });
+        function updateTimer() {
+            const elapsed = Date.now() - startTime;
+            const totalSeconds = Math.floor(elapsed / 1000);
+            const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            timerDisplay.textContent = `Waktu: ${minutes}:${seconds}`;
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            const totalElapsed = Date.now() - startTime;
+            return Math.floor(totalElapsed / 1000); 
+        }
+
+        // --- FUNGSI UTAMA: MEMUAT SOAL (Ditambahkan Panggilan Suara) ---
+        function loadQuestion() {
+            if (currentQuestionIndex >= shuffledQuizData.length) {
+                showResults();
+                return;
             }
 
-            // --- FUNGSI CEK JAWABAN (OTOMATIS LANJUT) ---
-            function checkAnswer(e) {
-                const selectedButton = e.target;
-                const isCorrect = selectedButton.getAttribute('data-correct') === 'true';
-                const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            const currentItem = shuffledQuizData[currentQuestionIndex];
+            optionsArea.innerHTML = '';
+            
+            counter.textContent = `Soal ${currentQuestionIndex + 1} dari ${shuffledQuizData.length}`;
+            questionBox.textContent = currentItem.english;
+            
+            // ⭐ PANGGIL FUNGSI SUARA DI SINI
+            // Ini akan mengucapkan kata kerja yang baru dimuat
+            speakText(currentItem.english);
+            
+            // Logika Pilihan Ganda (Sama seperti sebelumnya)
+            const incorrectOptions = vocabularyData
+                .filter(item => item.id !== currentItem.id) 
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 3) 
+                .map(item => ({ text: item.pronunciation, correct: false }));
 
-                // Nonaktifkan semua tombol
-                document.querySelectorAll('.option-button').forEach(btn => {
-                    btn.classList.add('disabled');
-                    btn.removeEventListener('click', checkAnswer);
-                });
-                
-                // Beri feedback visual cepat
-                if (isCorrect) {
-                    selectedButton.style.backgroundColor = '#d1f7d1'; 
-                } else {
-                    selectedButton.style.backgroundColor = '#f8d7da'; 
-                }
+            const allOptions = [
+                ...incorrectOptions, 
+                { text: currentItem.pronunciation, correct: true }
+            ];
+            allOptions.sort(() => 0.5 - Math.random());
 
-                // Simpan Jawaban
-                userAnswers.push({
-                    english: currentQuestion.english,
-                    correctPronunciation: currentQuestion.pronunciation,
-                    userSelected: selectedButton.textContent,
-                    isCorrect: isCorrect
-                });
+            allOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.textContent = option.text;
+                button.setAttribute('data-correct', option.correct);
+                button.addEventListener('click', checkAnswer);
+                optionsArea.appendChild(button);
+            });
+        }
 
-                if (isCorrect) {
-                    score++;
-                }
+        // --- FUNGSI CEK JAWABAN (Tidak Berubah) ---
+        function checkAnswer(e) {
+            const selectedButton = e.target;
+            const isCorrect = selectedButton.getAttribute('data-correct') === 'true';
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
 
-                // Lanjut otomatis setelah jeda visual
-                currentQuestionIndex++;
-                setTimeout(loadQuestion, 500); 
+            // Nonaktifkan semua tombol
+            document.querySelectorAll('.option-button').forEach(btn => {
+                btn.classList.add('disabled');
+                btn.removeEventListener('click', checkAnswer);
+            });
+            
+            // Beri feedback visual cepat
+            if (isCorrect) {
+                selectedButton.style.backgroundColor = '#d1f7d1'; 
+            } else {
+                selectedButton.style.backgroundColor = '#f8d7da'; 
+            }
+            
+            // Tunjukkan jawaban yang benar jika salah
+            const correctButton = Array.from(document.querySelectorAll('.option-button')).find(
+                btn => btn.getAttribute('data-correct') === 'true'
+            );
+            if (correctButton && !isCorrect) {
+                 correctButton.style.backgroundColor = '#ccffcc'; 
             }
 
-            // --- FUNGSI HASIL AKHIR ---
-            function showResults() {
-                const totalTimeSeconds = stopTimer();
-                const finalMinutes = String(Math.floor(totalTimeSeconds / 60)).padStart(2, '0');
-                const finalSeconds = String(totalTimeSeconds % 60).padStart(2, '0');
-                const totalQuestions = vocabularyData.length;
+            // Simpan Jawaban
+            userAnswers.push({
+                english: currentQuestion.english,
+                correctPronunciation: currentQuestion.pronunciation,
+                userSelected: selectedButton.textContent,
+                isCorrect: isCorrect
+            });
 
-                // Membangun tampilan hasil akhir
-                const resultsHTML = `
-                    <h2>🎉 Kuis Selesai! 🎉</h2>
-                    <p style="font-size: 1.5em;">Waktu Penyelesaian:</p>
-                    <p style="font-size: 2.5em; color: #17a2b8; margin: 0 0 10px 0;">
-                        ${finalMinutes}:${finalSeconds}
-                    </p>
-                    <p style="font-size: 1.5em; font-weight: bold;">Skor Akhir Anda:</p>
-                    <p style="font-size: 4em; color: ${score >= totalQuestions * 0.7 ? '#28a745' : '#dc3545'}; margin: 0;">
-                        ${score} / ${totalQuestions}
-                    </p>
-                    <p>${score >= totalQuestions * 0.7 ? 'Kerja bagus!' : 'Terus semangat belajar!'}</p>
-                    
-                    <button id="restart-button">Mulai Kuis Baru</button>
+            if (isCorrect) {
+                score++;
+            }
 
-                    <h3>Detail Jawaban:</h3>
-                    <div id="result-details"></div>
+            currentQuestionIndex++;
+            setTimeout(loadQuestion, 500); 
+        }
+
+        // --- FUNGSI HASIL AKHIR (Tidak Berubah) ---
+        function showResults() {
+            const totalTimeSeconds = stopTimer();
+            const finalMinutes = String(Math.floor(totalTimeSeconds / 60)).padStart(2, '0');
+            const finalSeconds = String(totalTimeSeconds % 60).padStart(2, '0');
+            const totalQuestions = vocabularyData.length;
+
+            const resultsHTML = `
+                <h2>🎉 Kuis Selesai! 🎉</h2>
+                <p style="font-size: 1.5em;">Waktu Penyelesaian:</p>
+                <p style="font-size: 2.5em; color: #17a2b8; margin: 0 0 10px 0;">
+                    ${finalMinutes}:${finalSeconds}
+                </p>
+                <p style="font-size: 1.5em; font-weight: bold;">Skor Akhir Anda:</p>
+                <p style="font-size: 4em; color: ${score >= totalQuestions * 0.7 ? '#28a745' : '#dc3545'}; margin: 0;">
+                    ${score} / ${totalQuestions}
+                </p>
+                <p>${score >= totalQuestions * 0.7 ? 'Kerja bagus!' : 'Terus semangat belajar!'}</p>
+                
+                <button id="restart-button">Mulai Kuis Baru</button>
+
+                <h3>Detail Jawaban:</h3>
+                <div id="result-details"></div>
+            `;
+            
+            quizContainer.innerHTML = resultsHTML;
+
+            document.getElementById('restart-button').addEventListener('click', () => {
+                location.reload(); 
+            });
+
+            const detailsArea = document.getElementById('result-details');
+            userAnswers.forEach((result, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `result-item ${result.isCorrect ? 'result-correct' : 'result-incorrect'}`;
+                
+                const statusIcon = result.isCorrect ? '✅' : '❌';
+                
+                itemDiv.innerHTML = `
+                    <strong>${statusIcon} Soal ${index + 1}:</strong> ${result.english}
+                    <br> 
+                    <span style="margin-left: 20px;">Jawaban Benar: ${result.correctPronunciation}</span>
+                    <br>
+                    <span style="margin-left: 20px;">Jawaban Anda: ${result.userSelected}</span>
                 `;
-                
-                // Mengganti seluruh konten quiz-container
-                quizContainer.innerHTML = resultsHTML;
+                detailsArea.appendChild(itemDiv);
+            });
+        }
 
-                // Mengatasi error restart dengan reload halaman
-                document.getElementById('restart-button').addEventListener('click', () => {
-                    location.reload(); 
-                });
+        // --- FUNGSI UTILITY (INISIALISASI) ---
+        function initQuiz() {
+            shuffledQuizData = [...vocabularyData].sort(() => 0.5 - Math.random());
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            
+            startTimer();
+            loadQuestion();
+        }
 
-                // Tampilkan rincian jawaban
-                const detailsArea = document.getElementById('result-details');
-                userAnswers.forEach((result, index) => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = `result-item ${result.isCorrect ? 'result-correct' : 'result-incorrect'}`;
-                    
-                    const statusIcon = result.isCorrect ? '✅' : '❌';
-                    
-                    itemDiv.innerHTML = `
-                        <strong>${statusIcon} Soal ${index + 1}:</strong> ${result.english}
-                        <br> 
-                        <span style="margin-left: 20px;">Jawaban Benar: ${result.correctPronunciation}</span>
-                        <br>
-                        <span style="margin-left: 20px;">Jawaban Anda: ${result.userSelected}</span>
-                    `;
-                    detailsArea.appendChild(itemDiv);
-                });
-            }
-
-            // --- INISIALISASI ---
-            function initQuiz() {
-                // Reset Variabel Status
-                shuffledQuizData = [...vocabularyData].sort(() => 0.5 - Math.random());
-                currentQuestionIndex = 0;
-                score = 0;
-                userAnswers = [];
-                
-                // Mulai Timer
-                startTimer();
-                
-                // Mulai Kuis
-                loadQuestion();
-            }
-
-            // Mulai kuis saat halaman pertama kali dimuat
-            initQuiz();
-        });
-    </script>
+        initQuiz();
+    });
+</script>
 
 </body>
 </html>
