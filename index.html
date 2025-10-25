@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kuis Kosakata dengan Waktu & Restart</title>
+    
+    <style>
+        /* PERUBAHAN UTAMA DI SINI UNTUK SENTRALISASI */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            
+            /* --- Flexbox untuk Sentralisasi --- */
+            display: flex; /* Aktifkan Flexbox */
+            flex-direction: column; 
+            align-items: center; /* Pusatkan secara horizontal */
+            justify-content: center; /* Pusatkan secara vertikal */
+            min-height: 100vh; /* Pastikan body mengambil tinggi penuh layar */
+            margin: 0; /* Hapus margin default browser */
+            /* ---------------------------------- */
+            
+            background-color: #e8f4f8;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px; /* Batasi lebar maksimum untuk desktop */
+            text-align: center;
+        }
+
+        /* Styling lainnya tetap sama */
+        h1 {
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        #header-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        #quiz-timer, #question-counter {
+            font-size: 1.1em;
+            color: #555;
+        }
+
+        #question-box {
+            background-color: #f0f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            min-height: 50px;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Area Pilihan Ganda */
+        #options-area {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-button {
+            padding: 15px;
+            background-color: #f7f7f7;
+            color: #333;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: background-color 0.2s, border-color 0.2s;
+            text-align: left;
+        }
+        
+        .option-button:hover:not(.disabled) {
+            background-color: #e9e9e9;
+            border-color: #007bff;
+        }
+
+        .disabled {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        #result-details {
+            text-align: left;
+            margin-top: 30px;
+            border-top: 1px solid #ccc;
+            padding-top: 20px;
+        }
+        
+        .result-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+        
+        .result-correct {
+            background-color: #e6ffe6;
+            border-left: 5px solid green;
+        }
+        
+        .result-incorrect {
+            background-color: #ffe6e6;
+            border-left: 5px solid red;
+        }
+
+        #restart-button {
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 1.1em;
+            transition: background-color 0.3s;
+        }
+
+        #restart-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    
+</head>
+<body>
+    <script src="main.js"></script>
+
+    <div class="quiz-container">
+        <h1>Tes Penyebutan Kosakata</h1>
+        <p>Pilih perkiraan penyebutan Bahasa Indonesia yang benar.</p>
+
+        <div id="header-info">
+            <div id="question-counter"></div>
+            <div id="quiz-timer">Waktu: 00:00</div>
+        </div>
+
+        <div id="question-box"></div>
+        
+        <div id="options-area">
+            </div>
+
+        <p id="feedback"></p>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Data JSON Kosakata (10 Contoh)
+            const vocabularyData = [
+    { "id": 1, "english": "Accept", "pronunciation": "Ak-sep" },
+    { "id": 2, "english": "Achieve", "pronunciation": "E-ciif" },
+    { "id": 3, "english": "Add", "pronunciation": "Ed" },
+    { "id": 4, "english": "Admire", "pronunciation": "Ad-mair" },
+    { "id": 5, "english": "Admit", "pronunciation": "Ad-mit" },
+    { "id": 6, "english": "Advise", "pronunciation": "Ad-vais" },
+    { "id": 7, "english": "Afford", "pronunciation": "E-fourd" },
+    { "id": 8, "english": "Agree", "pronunciation": "E-grii" },
+    { "id": 9, "english": "Allow", "pronunciation": "E-lau" },
+    { "id": 10, "english": "Answer", "pronunciation": "An-ser" },
+    { "id": 11, "english": "Apologize", "pronunciation": "E-pol-o-jaiz" },
+    { "id": 12, "english": "Appear", "pronunciation": "E-piir" },
+    { "id": 13, "english": "Apply", "pronunciation": "E-plai" },
+    { "id": 14, "english": "Argue", "pronunciation": "Ar-gyu" },
+    { "id": 15, "english": "Arrange", "pronunciation": "E-reinj" },
+    { "id": 16, "english": "Arrive", "pronunciation": "E-raiv" },
+    { "id": 17, "english": "Ask", "pronunciation": "Ask" },
+    { "id": 18, "english": "Avoid", "pronunciation": "E-void" },
+    { "id": 19, "english": "Bake", "pronunciation": "Beik" },
+    { "id": 20, "english": "Beat", "pronunciation": "Bit" },
+    { "id": 21, "english": "Become", "pronunciation": "Bi-kam" },
+    { "id": 22, "english": "Begin", "pronunciation": "Bi-gin" },
+    { "id": 23, "english": "Believe", "pronunciation": "Be-liiv" },
+    { "id": 24, "english": "Bend", "pronunciation": "Bend" },
+    { "id": 25, "english": "Book", "pronunciation": "Buk" },
+    { "id": 26, "english": "Borrow", "pronunciation": "Bo-ro" },
+    { "id": 27, "english": "Breathe", "pronunciation": "Briid" },
+    { "id": 28, "english": "Bring", "pronunciation": "Bring" },
+    { "id": 29, "english": "Build", "pronunciation": "Bild" },
+    { "id": 30, "english": "Burn", "pronunciation": "Bern" },
+    { "id": 31, "english": "Buy", "pronunciation": "Bai" },
+    { "id": 32, "english": "Call", "pronunciation": "Kol" },
+    { "id": 33, "english": "Can", "pronunciation": "Ken" },
+    { "id": 34, "english": "Cancel", "pronunciation": "Ken-sel" },
+    { "id": 35, "english": "Carry", "pronunciation": "Ke-ri" },
+    { "id": 36, "english": "Catch", "pronunciation": "Kec" },
+    { "id": 37, "english": "Change", "pronunciation": "Cheinj" },
+    { "id": 38, "english": "Choose", "pronunciation": "Cus" },
+    { "id": 39, "english": "Clean", "pronunciation": "Klin" },
+    { "id": 40, "english": "Close", "pronunciation": "Klos" },
+    { "id": 41, "english": "Collect", "pronunciation": "Ko-lek" },
+    { "id": 42, "english": "Come", "pronunciation": "Kam" },
+    { "id": 43, "english": "Compare", "pronunciation": "Kom-peir" },
+    { "id": 44, "english": "Complain", "pronunciation": "Kom-plein" },
+    { "id": 45, "english": "Continue", "pronunciation": "Kon-ti-nyu" },
+    { "id": 46, "english": "Cook", "pronunciation": "Kuk" },
+    { "id": 47, "english": "Copy", "pronunciation": "Ko-pi" },
+    { "id": 48, "english": "Cost", "pronunciation": "Kost" },
+    { "id": 49, "english": "Count", "pronunciation": "Kaun" },
+    { "id": 50, "english": "Cover", "pronunciation": "Ka-ver" },
+    { "id": 51, "english": "Create", "pronunciation": "Kri-eit" },
+    { "id": 52, "english": "Cry", "pronunciation": "Krai" },
+    { "id": 53, "english": "Cut", "pronunciation": "Kat" },
+    { "id": 54, "english": "Damage", "pronunciation": "Da-mej" },
+    { "id": 55, "english": "Dance", "pronunciation": "Dans" },
+    { "id": 56, "english": "Decide", "pronunciation": "Di-said" },
+    { "id": 57, "english": "Deliver", "pronunciation": "Di-li-ver" },
+    { "id": 58, "english": "Deny", "pronunciation": "Di-nai" },
+    { "id": 59, "english": "Describe", "pronunciation": "Di-skraib" },
+    { "id": 60, "english": "Develop", "pronunciation": "Di-ve-lop" },
+    { "id": 61, "english": "Die", "pronunciation": "Dai" },
+    { "id": 62, "english": "Disagree", "pronunciation": "Dis-e-grii" },
+    { "id": 63, "english": "Discover", "pronunciation": "Di-ska-ver" },
+    { "id": 64, "english": "Do", "pronunciation": "Du" },
+    { "id": 65, "english": "Draw", "pronunciation": "Dro" },
+    { "id": 66, "english": "Dream", "pronunciation": "Drim" },
+    { "id": 67, "english": "Drink", "pronunciation": "Drink" },
+    { "id": 68, "english": "Drive", "pronunciation": "Draiv" },
+    { "id": 69, "english": "Eat", "pronunciation": "It" },
+    { "id": 70, "english": "Enable", "pronunciation": "En-ei-bel" },
+    { "id": 71, "english": "Encourage", "pronunciation": "En-ka-rij" },
+    { "id": 72, "english": "Enjoy", "pronunciation": "En-joi" },
+    { "id": 73, "english": "Enter", "pronunciation": "En-ter" },
+    { "id": 74, "english": "Escape", "pronunciation": "Es-keip" },
+    { "id": 75, "english": "Estimate", "pronunciation": "Es-ti-meit" },
+    { "id": 76, "english": "Examine", "pronunciation": "Ek-za-min" },
+    { "id": 77, "english": "Exist", "pronunciation": "Eg-zis" },
+    { "id": 78, "english": "Expand", "pronunciation": "Ek-spen" },
+    { "id": 79, "english": "Expect", "pronunciation": "Ek-spek" },
+    { "id": 80, "english": "Explain", "pronunciation": "Ek-splein" },
+    { "id": 81, "english": "Face", "pronunciation": "Feis" },
+    { "id": 82, "english": "Fail", "pronunciation": "Feil" },
+    { "id": 83, "english": "Fall", "pronunciation": "Fol" },
+    { "id": 84, "english": "Fear", "pronunciation": "Fir" },
+    { "id": 85, "english": "Feel", "pronunciation": "Fiil" },
+    { "id": 86, "english": "Fight", "pronunciation": "Fait" },
+    { "id": 87, "english": "Fill", "pronunciation": "Fil" },
+    { "id": 88, "english": "Find", "pronunciation": "Faind" },
+    { "id": 89, "english": "Finish", "pronunciation": "Fi-nis" },
+    { "id": 90, "english": "Fit", "pronunciation": "Fit" },
+    { "id": 91, "english": "Follow", "pronunciation": "Fo-lou" },
+    { "id": 92, "english": "Forget", "pronunciation": "For-get" },
+    { "id": 93, "english": "Forgive", "pronunciation": "For-giv" },
+    { "id": 94, "english": "Get", "pronunciation": "Get" },
+    { "id": 95, "english": "Give", "pronunciation": "Giv" },
+    { "id": 96, "english": "Go", "pronunciation": "Gou" },
+    { "id": 97, "english": "Happen", "pronunciation": "Ha-pen" },
+    { "id": 98, "english": "Hate", "pronunciation": "Heit" },
+    { "id": 99, "english": "Have", "pronunciation": "Hav" },
+    { "id": 100, "english": "Hear", "pronunciation": "Hir" },
+    { "id": 101, "english": "Help", "pronunciation": "Help" },
+    { "id": 102, "english": "Hide", "pronunciation": "Haid" },
+    { "id": 103, "english": "Hope", "pronunciation": "Houp" },
+    { "id": 104, "english": "Imagine", "pronunciation": "I-ma-jin" },
+    { "id": 105, "english": "Improve", "pronunciation": "Im-pruf" },
+    { "id": 106, "english": "Include", "pronunciation": "In-klud" },
+    { "id": 107, "english": "Increase", "pronunciation": "In-kris" },
+    { "id": 108, "english": "Inform", "pronunciation": "In-form" },
+    { "id": 109, "english": "Insist", "pronunciation": "In-sis" },
+    { "id": 110, "english": "Intend", "pronunciation": "In-ten" },
+    { "id": 111, "english": "Introduce", "pronunciation": "In-tro-dyus" },
+    { "id": 112, "english": "Invite", "pronunciation": "In-vait" },
+    { "id": 113, "english": "Join", "pronunciation": "Join" },
+    { "id": 114, "english": "Jump", "pronunciation": "Jamp" },
+    { "id": 115, "english": "Keep", "pronunciation": "Kip" },
+    { "id": 116, "english": "Kill", "pronunciation": "Kil" },
+    { "id": 117, "english": "Know", "pronunciation": "Nou" },
+    { "id": 118, "english": "Laugh", "pronunciation": "Laf" },
+    { "id": 119, "english": "Lay", "pronunciation": "Lei" },
+    { "id": 120, "english": "Lead", "pronunciation": "Lid" },
+    { "id": 121, "english": "Learn", "pronunciation": "Lern" },
+    { "id": 122, "english": "Leave", "pronunciation": "Liiv" },
+    { "id": 123, "english": "Lend", "pronunciation": "Lend" },
+    { "id": 124, "english": "Lie", "pronunciation": "Lai" },
+    { "id": 125, "english": "Like", "pronunciation": "Laik" },
+    { "id": 126, "english": "Listen", "pronunciation": "Li-sen" },
+    { "id": 127, "english": "Live", "pronunciation": "Liv" },
+    { "id": 128, "english": "Look", "pronunciation": "Luk" },
+    { "id": 129, "english": "Lose", "pronunciation": "Luz" },
+    { "id": 130, "english": "Love", "pronunciation": "Lav" },
+    { "id": 131, "english": "Make", "pronunciation": "Meik" },
+    { "id": 132, "english": "Manage", "pronunciation": "Ma-nij" },
+    { "id": 133, "english": "Mean", "pronunciation": "Min" },
+    { "id": 134, "english": "Meet", "pronunciation": "Mit" },
+    { "id": 135, "english": "Mention", "pronunciation": "Men-syen" },
+    { "id": 136, "english": "Mind", "pronunciation": "Maind" },
+    { "id": 137, "english": "Miss", "pronunciation": "Mis" },
+    { "id": 138, "english": "Move", "pronunciation": "Muv" },
+    { "id": 139, "english": "Need", "pronunciation": "Nid" },
+    { "id": 140, "english": "Note", "pronunciation": "Nout" },
+    { "id": 141, "english": "Notice", "pronunciation": "Nou-tis" },
+    { "id": 142, "english": "Offer", "pronunciation": "O-fer" },
+    { "id": 143, "english": "Open", "pronunciation": "Ou-pen" },
+    { "id": 144, "english": "Order", "pronunciation": "Or-der" },
+    { "id": 145, "english": "Own", "pronunciation": "Oun" },
+    { "id": 146, "english": "Pay", "pronunciation": "Pei" },
+    { "id": 147, "english": "Perform", "pronunciation": "Per-form" },
+    { "id": 148, "english": "Pick", "pronunciation": "Pik" },
+    { "id": 149, "english": "Plan", "pronunciation": "Plen" },
+    { "id": 150, "english": "Play", "pronunciation": "Plei" },
+    { "id": 151, "english": "Point", "pronunciation": "Point" },
+    { "id": 152, "english": "Prefer", "pronunciation": "Pri-fer" },
+    { "id": 153, "english": "Prepare", "pronunciation": "Pri-peir" },
+    { "id": 154, "english": "Present", "pronunciation": "Pri-zen" },
+    { "id": 155, "english": "Prevent", "pronunciation": "Pri-ven" },
+    { "id": 156, "english": "Print", "pronunciation": "Print" },
+    { "id": 157, "english": "Produce", "pronunciation": "Pro-dyus" },
+    { "id": 158, "english": "Promise", "pronunciation": "Pro-mis" },
+    { "id": 159, "english": "Protect", "pronunciation": "Pro-tek" },
+    { "id": 160, "english": "Prove", "pronunciation": "Pruuv" },
+    { "id": 161, "english": "Pull", "pronunciation": "Pul" },
+    { "id": 162, "english": "Push", "pronunciation": "Pus" },
+    { "id": 163, "english": "Put", "pronunciation": "Put" },
+    { "id": 164, "english": "Raise", "pronunciation": "Reiz" },
+    { "id": 165, "english": "Reach", "pronunciation": "Rich" },
+    { "id": 166, "english": "Read", "pronunciation": "Riid" },
+    { "id": 167, "english": "Realize", "pronunciation": "Rii-e-laiz" },
+    { "id": 168, "english": "Receive", "pronunciation": "Ri-siiv" },
+    { "id": 169, "english": "Recognize", "pronunciation": "Re-ko-naiz" },
+    { "id": 170, "english": "Record", "pronunciation": "Ri-kord" },
+    { "id": 171, "english": "Reduce", "pronunciation": "Ri-dyus" },
+    { "id": 172, "english": "Reflect", "pronunciation": "Ri-flek" },
+    { "id": 173, "english": "Refuse", "pronunciation": "Ri-fyus" },
+    { "id": 174, "english": "Regret", "pronunciation": "Ri-gret" },
+    { "id": 175, "english": "Relate", "pronunciation": "Ri-leit" },
+    { "id": 176, "english": "Release", "pronunciation": "Ri-liis" },
+    { "id": 177, "english": "Remain", "pronunciation": "Ri-mein" },
+    { "id": 178, "english": "Remember", "pronunciation": "Ri-mem-ber" },
+    { "id": 179, "english": "Remove", "pronunciation": "Ri-muuv" },
+    { "id": 180, "english": "Repeat", "pronunciation": "Ri-piit" },
+    { "id": 181, "english": "Replace", "pronunciation": "Ri-pleis" },
+    { "id": 182, "english": "Reply", "pronunciation": "Ri-plai" },
+    { "id": 183, "english": "Report", "pronunciation": "Ri-port" },
+    { "id": 184, "english": "Require", "pronunciation": "Ri-kwair" },
+    { "id": 185, "english": "Rest", "pronunciation": "Res" },
+    { "id": 186, "english": "Return", "pronunciation": "Ri-tern" },
+    { "id": 187, "english": "Reveal", "pronunciation": "Ri-viil" },
+    { "id": 188, "english": "Ring", "pronunciation": "Ring" },
+    { "id": 189, "english": "Rise", "pronunciation": "Rais" },
+    { "id": 190, "english": "Roll", "pronunciation": "Roul" },
+    { "id": 191, "english": "Run", "pronunciation": "Ran" },
+    { "id": 192, "english": "Save", "pronunciation": "Seiv" },
+    { "id": 193, "english": "Say", "pronunciation": "Sei" },
+    { "id": 194, "english": "See", "pronunciation": "Sii" },
+    { "id": 195, "english": "Seek", "pronunciation": "Siik" },
+    { "id": 196, "english": "Seem", "pronunciation": "Sim" },
+    { "id": 197, "english": "Sell", "pronunciation": "Sel" },
+    { "id": 198, "english": "Send", "pronunciation": "Sen" },
+    { "id": 199, "english": "Separate", "pronunciation": "Se-pe-reit" },
+    { "id": 200, "english": "Serve", "pronunciation": "Serv" },
+    { "id": 201, "english": "Set", "pronunciation": "Set" },
+    { "id": 202, "english": "Settle", "pronunciation": "Se-tel" },
+    { "id": 203, "english": "Shake", "pronunciation": "Sheik" },
+    { "id": 204, "english": "Share", "pronunciation": "Sheir" },
+    { "id": 205, "english": "Shoot", "pronunciation": "Shut" },
+    { "id": 206, "english": "Show", "pronunciation": "Shou" },
+    { "id": 207, "english": "Shrink", "pronunciation": "Shrink" },
+    { "id": 208, "english": "Shut", "pronunciation": "Shat" },
+    { "id": 209, "english": "Sing", "pronunciation": "Sing" },
+    { "id": 210, "english": "Sit", "pronunciation": "Sit" },
+    { "id": 211, "english": "Sleep", "pronunciation": "Slip" },
+    { "id": 212, "english": "Smile", "pronunciation": "Smail" },
+    { "id": 213, "english": "Solve", "pronunciation": "Solv" },
+    { "id": 214, "english": "Sound", "pronunciation": "Saund" },
+    { "id": 215, "english": "Speak", "pronunciation": "Spik" },
+    { "id": 216, "english": "Spend", "pronunciation": "Spen" },
+    { "id": 217, "english": "Spread", "pronunciation": "Spreid" },
+    { "id": 218, "english": "Stand", "pronunciation": "Sten" },
+    { "id": 219, "english": "Start", "pronunciation": "Start" },
+    { "id": 220, "english": "State", "pronunciation": "Steit" },
+    { "id": 221, "english": "Stay", "pronunciation": "Stei" },
+    { "id": 222, "english": "Step", "pronunciation": "Step" },
+    { "id": 223, "english": "Stick", "pronunciation": "Stik" },
+    { "id": 224, "english": "Stop", "pronunciation": "Stop" },
+    { "id": 225, "english": "Study", "pronunciation": "Sta-di" },
+    { "id": 226, "english": "Succeed", "pronunciation": "Sak-siid" },
+    { "id": 227, "english": "Suggest", "pronunciation": "Sa-jes" },
+    { "id": 228, "english": "Support", "pronunciation": "Sa-port" },
+    { "id": 229, "english": "Suppose", "pronunciation": "Sa-pouz" },
+    { "id": 230, "english": "Survive", "pronunciation": "Ser-vaiv" },
+    { "id": 231, "english": "Take", "pronunciation": "Teik" },
+    { "id": 232, "english": "Talk", "pronunciation": "Tok" },
+    { "id": 233, "english": "Teach", "pronunciation": "Tich" },
+    { "id": 234, "english": "Tell", "pronunciation": "Tel" },
+    { "id": 235, "english": "Tend", "pronunciation": "Ten" },
+    { "id": 236, "english": "Think", "pronunciation": "Tingk" },
+    { "id": 237, "english": "Throw", "pronunciation": "Trou" },
+    { "id": 238, "english": "Touch", "pronunciation": "Tac" },
+    { "id": 239, "english": "Train", "pronunciation": "Trein" },
+    { "id": 240, "english": "Travel", "pronunciation": "Tra-vel" },
+    { "id": 241, "english": "Treat", "pronunciation": "Trit" },
+    { "id": 242, "english": "Try", "pronunciation": "Trai" },
+    { "id": 243, "english": "Turn", "pronunciation": "Tern" },
+    { "id": 244, "english": "Understand", "pronunciation": "An-der-sten" },
+    { "id": 245, "english": "Unite", "pronunciation": "Yu-nait" },
+    { "id": 246, "english": "Use", "pronunciation": "Yus" },
+    { "id": 247, "english": "Vary", "pronunciation": "Ve-ri" },
+    { "id": 248, "english": "View", "pronunciation": "Vyu" },
+    { "id": 249, "english": "Visit", "pronunciation": "Vi-sit" },
+    { "id": 250, "english": "Vote", "pronunciation": "Vout" },
+    { "id": 251, "english": "Wait", "pronunciation": "Weit" },
+    { "id": 252, "english": "Wake", "pronunciation": "Weik" },
+    { "id": 253, "english": "Walk", "pronunciation": "Wok" },
+    { "id": 254, "english": "Want", "pronunciation": "Won" },
+    { "id": 255, "english": "Warn", "pronunciation": "Worn" },
+    { "id": 256, "english": "Wash", "pronunciation": "Wosh" },
+    { "id": 257, "english": "Watch", "pronunciation": "Woc" },
+    { "id": 258, "english": "Wear", "pronunciation": "Weir" },
+    { "id": 259, "english": "Win", "pronunciation": "Win" },
+    { "id": 260, "english": "Wish", "pronunciation": "Wis" },
+    { "id": 261, "english": "Withdraw", "pronunciation": "Wit-dro" },
+    { "id": 262, "english": "Wonder", "pronunciation": "Wan-der" },
+    { "id": 263, "english": "Work", "pronunciation": "Werk" },
+    { "id": 264, "english": "Worry", "pronunciation": "Wa-ri" },
+    { "id": 265, "english": "Write", "pronunciation": "Rait" },
+    { "id": 266, "english": "Analyze", "pronunciation": "A-na-laiz" },
+    { "id": 267, "english": "Assess", "pronunciation": "A-ses" },
+    { "id": 268, "english": "Attempt", "pronunciation": "A-tem" },
+    { "id": 269, "english": "Attach", "pronunciation": "A-tac" },
+    { "id": 270, "english": "Attract", "pronunciation": "A-trak" },
+    { "id": 271, "english": "Calculate", "pronunciation": "Kal-kyu-leit" },
+    { "id": 272, "english": "Claim", "pronunciation": "Kleim" },
+    { "id": 273, "english": "Commit", "pronunciation": "Ko-mit" },
+    { "id": 274, "english": "Compete", "pronunciation": "Kom-piit" },
+    { "id": 275, "english": "Concentrate", "pronunciation": "Kon-sen-treit" },
+    { "id": 276, "english": "Confirm", "pronunciation": "Kon-ferm" },
+    { "id": 277, "english": "Connect", "pronunciation": "Ko-nek" },
+    { "id": 278, "english": "Consist", "pronunciation": "Kon-sis" },
+    { "id": 279, "english": "Consult", "pronunciation": "Kon-salt" },
+    { "id": 280, "english": "Contain", "pronunciation": "Kon-tein" },
+    { "id": 281, "english": "Contribute", "pronunciation": "Kon-tri-byut" },
+    { "id": 282, "english": "Convey", "pronunciation": "Kon-vei" },
+    { "id": 283, "english": "Deal", "pronunciation": "Dil" },
+    { "id": 284, "english": "Defend", "pronunciation": "Di-fen" },
+    { "id": 285, "english": "Demand", "pronunciation": "Di-men" },
+    { "id": 286, "english": "Depart", "pronunciation": "Di-part" },
+    { "id": 287, "english": "Depend", "pronunciation": "Di-pen" },
+    { "id": 288, "english": "Determine", "pronunciation": "Di-ter-min" },
+    { "id": 289, "english": "Diminish", "pronunciation": "Di-mi-nis" },
+    { "id": 290, "english": "Distribute", "pronunciation": "Dis-tri-byut" },
+    { "id": 291, "english": "Draft", "pronunciation": "Draft" },
+    { "id": 292, "english": "Edit", "pronunciation": "E-dit" },
+    { "id": 293, "english": "Embrace", "pronunciation": "Em-breis" },
+    { "id": 294, "english": "Emphasize", "pronunciation": "Em-fa-saiz" },
+    { "id": 295, "english": "Enforce", "pronunciation": "En-fors" },
+    { "id": 296, "english": "Establish", "pronunciation": "E-sta-blis" },
+    { "id": 297, "english": "Evolve", "pronunciation": "E-volv" },
+    { "id": 298, "english": "Exclude", "pronunciation": "Eks-klud" },
+    { "id": 299, "english": "Exhibit", "pronunciation": "Eg-zi-bit" },
+    { "id": 300, "english": "Expand", "pronunciation": "Eks-pen" },
+    { "id": 301, "english": "Face", "pronunciation": "Feis" },
+    { "id": 302, "english": "Facilitate", "pronunciation": "Fe-si-li-teit" },
+    { "id": 303, "english": "Focus", "pronunciation": "Fo-kus" },
+    { "id": 304, "english": "Force", "pronunciation": "Fors" },
+    { "id": 305, "english": "Found", "pronunciation": "Faund" },
+    { "id": 306, "english": "Fulfill", "pronunciation": "Ful-fil" },
+    { "id": 307, "english": "Gather", "pronunciation": "Ga-der" },
+    { "id": 308, "english": "Generate", "pronunciation": "Je-ne-reit" },
+    { "id": 309, "english": "Govern", "pronunciation": "Ga-vern" },
+    { "id": 310, "english": "Guarantee", "pronunciation": "Ga-ran-tii" },
+    { "id": 311, "english": "Handle", "pronunciation": "Han-del" },
+    { "id": 312, "english": "Harm", "pronunciation": "Harm" },
+    { "id": 313, "english": "Hesitate", "pronunciation": "He-si-teit" },
+    { "id": 314, "english": "Highlight", "pronunciation": "Hai-lait" },
+    { "id": 315, "english": "Identify", "pronunciation": "Ai-den-ti-fai" },
+    { "id": 316, "english": "Illustrate", "pronunciation": "I-las-treit" },
+    { "id": 317, "english": "Impose", "pronunciation": "Im-pouz" },
+    { "id": 318, "english": "Indicate", "pronunciation": "In-di-keit" },
+    { "id": 319, "english": "Involve", "pronunciation": "In-volv" },
+    { "id": 320, "english": "Issue", "pronunciation": "I-syu" },
+    { "id": 321, "english": "Judge", "pronunciation": "Jaj" },
+    { "id": 322, "english": "Justify", "pronunciation": "Jas-ti-fai" },
+    { "id": 323, "english": "Launch", "pronunciation": "Lonch" },
+    { "id": 324, "english": "Limit", "pronunciation": "Li-mit" },
+    { "id": 325, "english": "Maintain", "pronunciation": "Mein-tein" },
+    { "id": 326, "english": "Measure", "pronunciation": "Me-zher" },
+    { "id": 327, "english": "Modify", "pronunciation": "Mo-di-fai" },
+    { "id": 328, "english": "Monitor", "pronunciation": "Mo-ni-tor" },
+    { "id": 329, "english": "Motivate", "pronunciation": "Mo-ti-veit" },
+    { "id": 330, "english": "Negotiate", "pronunciation": "Ni-gou-si-eit" },
+    { "id": 331, "english": "Obtain", "pronunciation": "Ob-tein" },
+    { "id": 332, "english": "Occur", "pronunciation": "O-ker" },
+    { "id": 333, "english": "Oppose", "pronunciation": "O-pouz" },
+    { "id": 334, "english": "Organize", "pronunciation": "Or-ge-naiz" },
+    { "id": 335, "english": "Overcome", "pronunciation": "Ou-ver-kam" },
+    { "id": 336, "english": "Oversee", "pronunciation": "Ou-ver-sii" },
+    { "id": 337, "english": "Own", "pronunciation": "Oun" },
+    { "id": 338, "english": "Participate", "pronunciation": "Par-ti-si-peit" },
+    { "id": 339, "english": "Perceive", "pronunciation": "Per-siiv" },
+    { "id": 340, "english": "Persuade", "pronunciation": "Per-sweid" },
+    { "id": 341, "english": "Pioneer", "pronunciation": "Pai-o-nir" },
+    { "id": 342, "english": "Portray", "pronunciation": "Por-trei" },
+    { "id": 343, "english": "Possess", "pronunciation": "Po-ses" },
+    { "id": 344, "english": "Postpone", "pronunciation": "Pous-poun" },
+    { "id": 345, "english": "Predict", "pronunciation": "Pri-dik" },
+    { "id": 346, "english": "Preserve", "pronunciation": "Pri-zerv" },
+    { "id": 347, "english": "Process", "pronunciation": "Pro-ses" },
+    { "id": 348, "english": "Propose", "pronunciation": "Pro-pouz" },
+    { "id": 349, "english": "Pursue", "pronunciation": "Per-syu" },
+    { "id": 350, "english": "Qualify", "pronunciation": "Kwo-li-fai" },
+    { "id": 351, "english": "Question", "pronunciation": "Kwes-cen" },
+    { "id": 352, "english": "Quote", "pronunciation": "Kwout" },
+    { "id": 353, "english": "Rank", "pronunciation": "Rank" },
+    { "id": 354, "english": "React", "pronunciation": "Ri-ek" },
+    { "id": 355, "english": "Recall", "pronunciation": "Ri-kol" },
+    { "id": 356, "english": "Recommend", "pronunciation": "Re-ko-men" },
+    { "id": 357, "english": "Recover", "pronunciation": "Ri-ka-ver" },
+    { "id": 358, "english": "Recruit", "pronunciation": "Ri-krut" },
+    { "id": 359, "english": "Refer", "pronunciation": "Ri-fer" },
+    { "id": 360, "english": "Regulate", "pronunciation": "Re-gyu-leit" },
+    { "id": 361, "english": "Reject", "pronunciation": "Ri-jek" },
+    { "id": 362, "english": "Relieve", "pronunciation": "Ri-liiv" },
+    { "id": 363, "english": "Require", "pronunciation": "Ri-kwair" },
+    { "id": 364, "english": "Resign", "pronunciation": "Ri-zain" },
+    { "id": 365, "english": "Resist", "pronunciation": "Ri-sis" },
+    { "id": 366, "english": "Resolve", "pronunciation": "Ri-zolv" },
+    { "id": 367, "english": "Respond", "pronunciation": "Ri-spon" },
+    { "id": 368, "english": "Restore", "pronunciation": "Ri-stor" },
+    { "id": 369, "english": "Restrict", "pronunciation": "Ri-strik" },
+    { "id": 370, "english": "Retain", "pronunciation": "Ri-tein" },
+    { "id": 371, "english": "Retire", "pronunciation": "Ri-tair" },
+    { "id": 372, "english": "Review", "pronunciation": "Ri-vyu" },
+    { "id": 373, "english": "Revise", "pronunciation": "Ri-vais" },
+    { "id": 374, "english": "Schedule", "pronunciation": "Ske-dul" },
+    { "id": 375, "english": "Scrape", "pronunciation": "Skreip" },
+    { "id": 376, "english": "Scratch", "pronunciation": "Skrac" },
+    { "id": 377, "english": "Secure", "pronunciation": "Se-kyur" },
+    { "id": 378, "english": "Seize", "pronunciation": "Siz" },
+    { "id": 379, "english": "Select", "pronunciation": "Se-lek" },
+    { "id": 380, "english": "Shift", "pronunciation": "Shift" },
+    { "id": 381, "english": "Sigh", "pronunciation": "Sai" },
+    { "id": 382, "english": "Signal", "pronunciation": "Sig-nal" },
+    { "id": 383, "english": "Simplify", "pronunciation": "Sim-pli-fai" },
+    { "id": 384, "english": "Simulate", "pronunciation": "Sim-yu-leit" },
+    { "id": 385, "english": "Skip", "pronunciation": "Skip" },
+    { "id": 386, "english": "Slap", "pronunciation": "Slap" },
+    { "id": 387, "english": "Slip", "pronunciation": "Slip" },
+    { "id": 388, "english": "Snap", "pronunciation": "Snap" },
+    { "id": 389, "english": "Squeeze", "pronunciation": "Skwiz" },
+    { "id": 390, "english": "Strengthen", "pronunciation": "Streng-ten" },
+    { "id": 391, "english": "Stretch", "pronunciation": "Strec" },
+    { "id": 392, "english": "Suffer", "pronunciation": "Sa-fer" },
+    { "id": 393, "english": "Supervise", "pronunciation": "Su-per-vais" },
+    { "id": 394, "english": "Suspect", "pronunciation": "Sas-pek" },
+    { "id": 395, "english": "Sustain", "pronunciation": "Sas-tein" },
+    { "id": 396, "english": "Target", "pronunciation": "Tar-get" },
+    { "id": 397, "english": "Testify", "pronunciation": "Tes-ti-fai" },
+    { "id": 398, "english": "Tolerate", "pronunciation": "To-le-reit" },
+    { "id": 399, "english": "Track", "pronunciation": "Trak" },
+    { "id": 400, "english": "Transmit", "pronunciation": "Trans-mit" },
+    { "id": 401, "english": "Undergo", "pronunciation": "An-der-gou" },
+    { "id": 402, "english": "Undertake", "pronunciation": "An-der-teik" },
+    { "id": 403, "english": "Unfold", "pronunciation": "An-fould" },
+    { "id": 404, "english": "Update", "pronunciation": "Ap-deit" },
+    { "id": 405, "english": "Uphold", "pronunciation": "Ap-hold" },
+    { "id": 406, "english": "Utilize", "pronunciation": "Yu-ti-laiz" },
+    { "id": 407, "english": "Validate", "pronunciation": "Va-li-deit" },
+    { "id": 408, "english": "Vanish", "pronunciation": "Va-nis" },
+    { "id": 409, "english": "Venture", "pronunciation": "Ven-cur" },
+    { "id": 410, "english": "Verify", "pronunciation": "Ve-ri-fai" },
+    { "id": 411, "english": "View", "pronunciation": "Vyu" },
+    { "id": 412, "english": "Violate", "pronunciation": "Vai-o-leit" },
+    { "id": 413, "english": "Visualize", "pronunciation": "Vi-syu-a-laiz" },
+    { "id": 414, "english": "Vow", "pronunciation": "Vau" },
+    { "id": 415, "english": "Wage", "pronunciation": "Weij" },
+    { "id": 416, "english": "Wander", "pronunciation": "Won-der" },
+    { "id": 417, "english": "Weigh", "pronunciation": "Wei" },
+    { "id": 418, "english": "Whistle", "pronunciation": "Wis-sel" },
+    { "id": 419, "english": "Witness", "pronunciation": "Wit-nes" },
+    { "id": 420, "english": "Wipe", "pronunciation": "Waip" },
+    { "id": 421, "english": "Wrestle", "pronunciation": "Res-sel" },
+    { "id": 422, "english": "Yield", "pronunciation": "Yild" },
+    { "id": 423, "english": "Zero", "pronunciation": "Zir-ou" },
+    { "id": 424, "english": "Zoom", "pronunciation": "Zuum" },
+    { "id": 425, "english": "Accompany", "pronunciation": "A-kam-pe-ni" },
+    { "id": 426, "english": "Acquire", "pronunciation": "A-kwair" },
+    { "id": 427, "english": "Adjust", "pronunciation": "A-jas" },
+    { "id": 428, "english": "Allocate", "pronunciation": "A-lo-keit" },
+    { "id": 429, "english": "Analyze", "pronunciation": "A-na-laiz" },
+    { "id": 430, "english": "Anticipate", "pronunciation": "An-ti-si-peit" },
+    { "id": 431, "english": "Appreciate", "pronunciation": "A-pri-si-eit" },
+    { "id": 432, "english": "Ascend", "pronunciation": "A-sen" },
+    { "id": 433, "english": "Assume", "pronunciation": "A-syum" },
+    { "id": 434, "english": "Attain", "pronunciation": "A-tein" },
+    { "id": 435, "english": "Avert", "pronunciation": "A-vert" },
+    { "id": 436, "english": "Boost", "pronunciation": "Bust" },
+    { "id": 437, "english": "Captivate", "pronunciation": "Kap-ti-veit" },
+    { "id": 438, "english": "Cede", "pronunciation": "Sid" },
+    { "id": 439, "english": "Cite", "pronunciation": "Sait" },
+    { "id": 440, "english": "Clarify", "pronunciation": "Kla-ri-fai" },
+    { "id": 441, "english": "Coincide", "pronunciation": "Kou-in-said" },
+    { "id": 442, "english": "Collapse", "pronunciation": "Ko-laps" },
+    { "id": 443, "english": "Commence", "pronunciation": "Ko-mens" },
+    { "id": 444, "english": "Compile", "pronunciation": "Kom-pail" },
+    { "id": 445, "english": "Concede", "pronunciation": "Kon-sid" },
+    { "id": 446, "english": "Condemn", "pronunciation": "Kon-dem" },
+    { "id": 447, "english": "Confine", "pronunciation": "Kon-fain" },
+    { "id in": 448, "english": "Conquer", "pronunciation": "Kong-ker" },
+    { "id": 449, "english": "Conserve", "pronunciation": "Kon-serv" },
+    { "id": 450, "english": "Contemplate", "pronunciation": "Kon-tem-pleit" },
+    { "id": 451, "english": "Contract", "pronunciation": "Kon-trak" },
+    { "id": 452, "english": "Convene", "pronunciation": "Kon-viin" },
+    { "id": 453, "english": "Correlate", "pronunciation": "Ko-re-leit" },
+    { "id": 454, "english": "Crumble", "pronunciation": "Kram-bel" },
+    { "id": 455, "english": "Customize", "pronunciation": "Kas-tem-aiz" },
+    { "id": 456, "english": "Decline", "pronunciation": "Di-klain" },
+    { "id": 457, "english": "Dedicate", "pronunciation": "De-di-keit" },
+    { "id": 458, "english": "Deem", "pronunciation": "Dim" },
+    { "id": 459, "english": "Deflect", "pronunciation": "Di-flek" },
+    { "id": 460, "english": "Demonstrate", "pronunciation": "De-mon-streit" },
+    { "id": 461, "english": "Depart", "pronunciation": "Di-part" },
+    { "id": 462, "english": "Depict", "pronunciation": "Di-pik" },
+    { "id": 463, "english": "Derive", "pronunciation": "Di-raiv" },
+    { "id": 464, "english": "Designate", "pronunciation": "De-zig-neit" },
+    { "id": 465, "english": "Detain", "pronunciation": "Di-tein" },
+    { "id": 466, "english": "Diagnose", "pronunciation": "Dai-eg-nouz" },
+    { "id": 467, "english": "Differ", "pronunciation": "Di-fer" },
+    { "id": 468, "english": "Differentiate", "pronunciation": "Di-fe-ren-si-eit" },
+    { "id": 469, "english": "Diminish", "pronunciation": "Di-mi-nis" },
+    { "id": 470, "english": "Discard", "pronunciation": "Dis-kard" },
+    { "id": 471, "english": "Disclose", "pronunciation": "Dis-klouz" },
+    { "id": 472, "english": "Displace", "pronunciation": "Dis-pleis" },
+    { "id": 473, "english": "Disrupt", "pronunciation": "Dis-rap" },
+    { "id": 474, "english": "Dissolve", "pronunciation": "Di-zolv" },
+    { "id": 475, "english": "Distort", "pronunciation": "Dis-tort" },
+    { "id": 476, "english": "Dive", "pronunciation": "Daiv" },
+    { "id": 477, "english": "Document", "pronunciation": "Do-kyu-men" },
+    { "id": 478, "english": "Dominate", "pronunciation": "Do-mi-neit" },
+    { "id": 479, "english": "Drift", "pronunciation": "Drif" },
+    { "id": 480, "english": "Eject", "pronunciation": "I-jek" },
+    { "id": 481, "english": "Elaborate", "pronunciation": "I-la-be-reit" },
+    { "id": 482, "english": "Elect", "pronunciation": "I-lek" },
+    { "id": 483, "english": "Eliminate", "pronunciation": "I-li-mi-neit" },
+    { "id": 484, "english": "Embed", "pronunciation": "Em-bed" },
+    { "id": 485, "english": "Embody", "pronunciation": "Em-bo-di" },
+    { "id": 486, "english": "Emerge", "pronunciation": "I-merj" },
+    { "id": 487, "english": "Encounter", "pronunciation": "En-kaun-ter" },
+    { "id": 488, "english": "Endure", "pronunciation": "En-dyur" },
+    { "id": 489, "english": "Engage", "pronunciation": "En-geij" },
+    { "id": 490, "english": "Enhance", "pronunciation": "En-hans" },
+    { "id": 491, "english": "Enquire", "pronunciation": "En-kwair" },
+    { "id": 492, "english": "Entail", "pronunciation": "En-teil" },
+    { "id": 493, "english": "Erode", "pronunciation": "I-roud" },
+    { "id": 494, "english": "Erupt", "pronunciation": "I-rap" },
+    { "id": 495, "english": "Escalate", "pronunciation": "Es-ke-leit" },
+    { "id in": 496, "english": "Establish", "pronunciation": "Es-ta-blis" },
+    { "id": 497, "english": "Exceed", "pronunciation": "Ek-siid" },
+    { "id": 498, "english": "Exclude", "pronunciation": "Eks-klud" },
+    { "id": 499, "english": "Execute", "pronunciation": "Ek-se-kyut" },
+    { "id": 500, "english": "Exert", "pronunciation": "Eg-zert" },
+    { "id": 501, "english": "Expand", "pronunciation": "Eks-pen" },
+    { "id": 502, "english": "Exploit", "pronunciation": "Eks-ploit" },
+    { "id": 503, "english": "Fabricate", "pronunciation": "Fa-bri-keit" },
+    { "id": 504, "english": "Faint", "pronunciation": "Feint" },
+    { "id": 505, "english": "Ferry", "pronunciation": "Fe-ri" },
+    { "id": 506, "english": "Flicker", "pronunciation": "Fli-ker" },
+    { "id": 507, "english": "Float", "pronunciation": "Flout" },
+    { "id": 508, "english": "Flourish", "pronunciation": "Fleri-s" },
+    { "id": 509, "english": "Fluctuate", "pronunciation": "Flak-cu-eit" },
+    { "id": 510, "english": "Foster", "pronunciation": "Fos-ter" },
+    { "id": 511, "english": "Freeze", "pronunciation": "Friz" },
+    { "id": 512, "english": "Frown", "pronunciation": "Fraun" },
+    { "id": 513, "english": "Fumble", "pronunciation": "Fam-bel" },
+    { "id": 514, "english": "Furnish", "pronunciation": "Fer-nis" },
+    { "id": 515, "english": "Gaze", "pronunciation": "Geiz" },
+    { "id": 516, "english": "Giggle", "pronunciation": "Gi-gel" },
+    { "id": 517, "english": "Glimmer", "pronunciation": "Gli-mer" },
+    { "id": 518, "english": "Grasp", "pronunciation": "Grasp" },
+    { "id": 519, "english": "Grieve", "pronunciation": "Griiv" },
+    { "id": 520, "english": "Grin", "pronunciation": "Grin" },
+    { "id": 521, "english": "Grip", "pronunciation": "Grip" },
+    { "id": 522, "english": "Halt", "pronunciation": "Holt" },
+    { "id": 523, "english": "Harmonize", "pronunciation": "Har-mo-naiz" },
+    { "id": 524, "english": "Hatch", "pronunciation": "Hac" },
+    { "id": 525, "english": "Heighten", "pronunciation": "Hai-ten" },
+    { "id": 526, "english": "Hinder", "pronunciation": "Hin-der" },
+    { "id": 527, "english": "Hire", "pronunciation": "Hair" },
+    { "id": 528, "english": "Huddle", "pronunciation": "Ha-del" },
+    { "id": 529, "english": "Hypothesize", "pronunciation": "Hai-po-te-saiz" },
+    { "id": 530, "english": "Implement", "pronunciation": "Im-ple-men" },
+    { "id": 531, "english": "Imply", "pronunciation": "Im-plai" },
+    { "id": 532, "english": "Incorporate", "pronunciation": "In-kor-pe-reit" },
+    { "id": 533, "english": "Incur", "pronunciation": "In-ker" },
+    { "id": 534, "english": "Induce", "pronunciation": "In-dyus" },
+    { "id": 535, "english": "Initiate", "pronunciation": "I-ni-si-eit" },
+    { "id": 536, "english": "Inject", "pronunciation": "In-jek" },
+    { "id": 537, "english": "Inspect", "pronunciation": "In-spek" },
+    { "id": 538, "english": "Integrate", "pronunciation": "In-te-greit" },
+    { "id": 539, "english": "Intervene", "pronunciation": "In-ter-viin" },
+    { "id": 540, "english": "Intimidate", "pronunciation": "In-ti-mi-deit" },
+    { "id": 541, "english": "Invalidate", "pronunciation": "In-va-li-deit" },
+    { "id": 542, "english": "Investigate", "pronunciation": "In-ves-ti-geit" },
+    { "id": 543, "english": "Irritate", "pronunciation": "I-ri-teit" },
+    { "id": 544, "english": "Jeopardize", "pronunciation": "Je-per-daiz" },
+    { "id": 545, "english": "Judge", "pronunciation": "Jaj" },
+    { "id": 546, "english": "Justify", "pronunciation": "Jas-ti-fai" },
+    { "id": 547, "english": "Lessen", "pronunciation": "Le-sen" },
+    { "id": 548, "english": "Leverage", "pronunciation": "Le-ve-rij" },
+    { "id": 549, "english": "Loom", "pronunciation": "Lu-m" },
+    { "id": 550, "english": "Magnify", "pronunciation": "Mag-ni-fai" },
+    { "id": 551, "english": "Manufacture", "pronunciation": "Ma-nyu-fek-cer" },
+    { "id": 552, "english": "Maximize", "pronunciation": "Mak-si-maiz" },
+    { "id": 553, "english": "Merge", "pronunciation": "Merj" },
+    { "id": 554, "english": "Minimize", "pronunciation": "Mi-ni-maiz" },
+    { "id": 555, "english": "Mislead", "pronunciation": "Mis-lid" },
+    { "id": 556, "english": "Mock", "pronunciation": "Mok" },
+    { "id": 557, "english": "Monitor", "pronunciation": "Mo-ni-tor" },
+    { "id": 558, "english": "Mumble", "pronunciation": "Mam-bel" },
+    { "id": 559, "english": "Muster", "pronunciation": "Mas-ter" },
+    { "id": 560, "english": "Navigate", "pronunciation": "Na-vi-geit" },
+    { "id": 561, "english": "Neglect", "pronunciation": "Ni-glek" },
+    { "id": 562, "english": "Nod", "pronunciation": "Nod" },
+    { "id": 563, "english": "Nurture", "pronunciation": "Ner-cur" },
+    { "id": 564, "english": "Object", "pronunciation": "Ob-jek" },
+    { "id": 565, "english": "Obligate", "pronunciation": "Ob-li-geit" },
+    { "id": 566, "english": "Observe", "pronunciation": "Ob-serv" },
+    { "id": 567, "english": "Obstruct", "pronunciation": "Ob-strak" },
+    { "id": 568, "english": "Offset", "pronunciation": "Of-set" },
+    { "id": 569, "english": "Omit", "pronunciation": "O-mit" },
+    { "id": 570, "english": "Operate", "pronunciation": "O-pe-reit" },
+    { "id": 571, "english": "Opt", "pronunciation": "Opt" },
+    { "id": 572, "english": "Orient", "pronunciation": "O-ri-en" },
+    { "id": 573, "english": "Outline", "pronunciation": "Aut-lain" },
+    { "id": 574, "english": "Output", "pronunciation": "Aut-put" },
+    { "id": 575, "english": "Overcome", "pronunciation": "Ou-ver-kam" },
+    { "id": 576, "english": "Overlook", "pronunciation": "Ou-ver-luk" },
+    { "id": 577, "english": "Pace", "pronunciation": "Peis" },
+    { "id": 578, "english": "Paraphrase", "pronunciation": "Pa-ra-freiz" },
+    { "id": 579, "english": "Parry", "pronunciation": "Pa-ri" },
+    { "id": 580, "english": "Perceive", "pronunciation": "Per-siiv" },
+    { "id": 581, "english": "Persist", "pronunciation": "Per-sis" },
+    { "id": 582, "english": "Pertain", "pronunciation": "Per-tein" },
+    { "id": 583, "english": "Petition", "pronunciation": "Pe-ti-syen" },
+    { "id": 584, "english": "Pinpoint", "pronunciation": "Pin-point" },
+    { "id": 585, "english": "Plead", "pronunciation": "Plid" },
+    { "id": 586, "english": "Possess", "pronunciation": "Po-ses" },
+    { "id": 587, "english": "Postulate", "pronunciation": "Pos-cu-leit" },
+    { "id": 588, "english": "Precede", "pronunciation": "Pri-sid" },
+    { "id": 589, "english": "Preclude", "pronunciation": "Pri-klud" },
+    { "id": 590, "english": "Prescribe", "pronunciation": "Pri-skraib" },
+    { "id": 591, "english": "Pretend", "pronunciation": "Pri-ten" },
+    { "id": 592, "english": "Prevail", "pronunciation": "Pri-veil" },
+    { "id": 593, "english": "Prohibit", "pronunciation": "Pro-hi-bit" },
+    { "id": 594, "english": "Propel", "pronunciation": "Pro-pel" },
+    { "id": 595, "english": "Pursue", "pronunciation": "Per-syu" },
+    { "id": 596, "english": "Quarrel", "pronunciation": "Kwo-rel" },
+    { "id": 597, "english": "Query", "pronunciation": "Kwi-ri" },
+    { "id": 598, "english": "Radiate", "pronunciation": "Rei-di-eit" },
+    { "id": 599, "english": "Raid", "pronunciation": "Reid" },
+    { "id": 600, "english": "Ramble", "pronunciation": "Ram-bel" },
+    { "id": 601, "english": "Range", "pronunciation": "Reinj" },
+    { "id": 602, "english": "Ratify", "pronunciation": "Ra-ti-fai" },
+    { "id": 603, "english": "Reassure", "pronunciation": "Rii-e-syur" },
+    { "id": 604, "english": "Rebound", "pronunciation": "Rii-baund" },
+    { "id": 605, "english": "Recede", "pronunciation": "Ri-siid" },
+    { "id": 606, "english": "Reciprocate", "pronunciation": "Ri-si-pro-keit" },
+    { "id": 607, "english": "Reconcile", "pronunciation": "Re-kon-sail" },
+    { "id": 608, "english": "Recur", "pronunciation": "Ri-ker" },
+    { "id": 609, "english": "Reinforce", "pronunciation": "Rii-in-fors" },
+    { "id": 610, "english": "Relinquish", "pronunciation": "Ri-ling-kwis" },
+    { "id": 611, "english": "Render", "pronunciation": "Ren-der" },
+    { "id": 612, "english": "Renounce", "pronunciation": "Ri-nauns" },
+    { "id": 613, "english": "Repel", "pronunciation": "Ri-pel" },
+    { "id": 614, "english": "Repress", "pronunciation": "Ri-pres" },
+    { "id": 615, "english": "Repudiate", "pronunciation": "Ri-pyu-di-eit" },
+    { "id": 616, "english": "Reside", "pronunciation": "Ri-said" },
+    { "id": 617, "english": "Retaliate", "pronunciation": "Ri-ta-li-eit" },
+    { "id": 618, "english": "Retract", "pronunciation": "Ri-trak" },
+    { "id": 619, "english": "Retrieve", "pronunciation": "Ri-triiv" },
+    { "id": 620, "english": "Revert", "pronunciation": "Ri-vert" },
+    { "id": 621, "english": "Revitalize", "pronunciation": "Rii-vai-te-laiz" },
+    { "id": 622, "english": "Sacrifice", "pronunciation": "Sa-kri-fais" },
+    { "id": 623, "english": "Scramble", "pronunciation": "Skram-bel" },
+    { "id": 624, "english": "Scrutinize", "pronunciation": "Sku-ti-naiz" },
+    { "id": 625, "english": "Segregate", "pronunciation": "Se-gri-geit" },
+    { "id": 626, "english": "Sideline", "pronunciation": "Said-lain" },
+    { "id": 627, "english": "Smolder", "pronunciation": "Smoul-der" },
+    { "id": 628, "english": "Soar", "pronunciation": "Sor" },
+    { "id": 629, "english": "Solidify", "pronunciation": "So-li-di-fai" },
+    { "id": 630, "english": "Specify", "pronunciation": "Spe-si-fai" },
+    { "id": 631, "english": "Stagger", "pronunciation": "Sta-ger" },
+    { "id": 632, "english": "Stipulate", "pronunciation": "Sti-pyu-leit" },
+    { "id": 633, "english": "Strive", "pronunciation": "Straiv" },
+    { "id": 634, "english": "Subsidize", "pronunciation": "Sab-si-daiz" },
+    { "id": 635, "english": "Substantiate", "pronunciation": "Sab-sten-si-eit" },
+    { "id": 636, "english": "Suffice", "pronunciation": "Sa-fais" },
+    { "id": 637, "english": "Surge", "pronunciation": "Serj" },
+    { "id": 638, "english": "Surpass", "pronunciation": "Ser-pas" },
+    { "id": 639, "english": "Swipe", "pronunciation": "Swaip" },
+    { "id": 640, "english": "Tackle", "pronunciation": "Ta-kel" },
+    { "id": 641, "english": "Tarnish", "pronunciation": "Tar-nis" },
+    { "id": 642, "english": "Temperate", "pronunciation": "Tem-pe-reit" },
+    { "id": 643, "english": "Terminate", "pronunciation": "Ter-mi-neit" },
+    { "id": 644, "english": "Thrive", "pronunciation": "Traiv" },
+    { "id": 645, "english": "Transcend", "pronunciation": "Trans-sen" },
+    { "id": 646, "english": "Translate", "pronunciation": "Trans-leit" },
+    { "id": 647, "english": "Traverse", "pronunciation": "Tra-vers" },
+    { "id": 648, "english": "Trek", "pronunciation": "Trek" },
+    { "id": 649, "english": "Tumble", "pronunciation": "Tam-bel" },
+    { "id": 650, "english": "Undermine", "pronunciation": "An-der-main" },
+    { "id": 651, "english": "Unveil", "pronunciation": "An-veil" },
+    { "id": 652, "english": "Uphold", "pronunciation": "Ap-hold" },
+    { "id": 653, "english": "Venture", "pronunciation": "Ven-cur" },
+    { "id": 654, "english": "Vibrate", "pronunciation": "Vai-breit" },
+    { "id": 655, "english": "Vindicate", "pronunciation": "Vin-di-keit" },
+    { "id": 656, "english": "Vow", "pronunciation": "Vau" },
+    { "id": 657, "english": "Wane", "pronunciation": "Wein" },
+    { "id": 658, "english": "Waver", "pronunciation": "Wei-ver" },
+    { "id": 659, "english": "Wield", "pronunciation": "Wild" },
+    { "id": 660, "english": "Wither", "pronunciation": "Wi-der" },
+    { "id": 661, "english": "Wobble", "pronunciation": "Wo-bel" },
+    { "id": 662, "english": "Wrangle", "pronunciation": "Rang-gel" },
+    { "id": 663, "english": "Wreck", "pronunciation": "Rek" },
+    { "id": 664, "english": "Wriggle", "pronunciation": "Ri-gel" },
+    { "id": 665, "english": "Yearn", "pronunciation": "Yern" },
+    { "id": 666, "english": "Absorb", "pronunciation": "Ab-sorb" },
+    { "id": 667, "english": "Accumulate", "pronunciation": "A-kyu-myu-leit" },
+    { "id": 668, "english": "Activate", "pronunciation": "Ak-ti-veit" },
+    { "id": 669, "english": "Allocate", "pronunciation": "A-lo-keit" },
+    { "id": 670, "english": "Amplify", "pronunciation": "Am-pli-fai" },
+    { "id": 671, "english": "Approve", "pronunciation": "A-pruuv" },
+    { "id": 672, "english": "Articulate", "pronunciation": "Ar-ti-kyu-leit" },
+    { "id": 673, "english": "Assimilate", "pronunciation": "A-si-mi-leit" },
+    { "id": 674, "english": "Authorize", "pronunciation": "O-te-raiz" },
+    { "id": 675, "english": "Bias", "pronunciation": "Bai-es" },
+    { "id": 676, "english": "Bolster", "pronunciation": "Boul-ster" },
+    { "id": 677, "english": "Bypass", "pronunciation": "Bai-pas" },
+    { "id": 678, "english": "Capitulate", "pronunciation": "Ka-pi-cu-leit" },
+    { "id": 679, "english": "Catalogue", "pronunciation": "Ka-te-log" },
+    { "id": 680, "english": "Certify", "pronunciation": "Ser-ti-fai" },
+    { "id": 681, "english": "Chafe", "pronunciation": "Cheif" },
+    { "id": 682, "english": "Chronicle", "pronunciation": "Kro-ni-kel" },
+    { "id": 683, "english": "Coerce", "pronunciation": "Ko-ers" },
+    { "id": 684, "english": "Commute", "pronunciation": "Ko-myut" },
+    { "id": 685, "english": "Conform", "pronunciation": "Kon-form" },
+    { "id": 686, "english": "Congregate", "pronunciation": "Kong-gri-geit" },
+    { "id": 687, "english": "Constitute", "pronunciation": "Kon-sti-tut" },
+    { "id": 688, "english": "Consummate", "pronunciation": "Kon-sa-meit" },
+    { "id": 689, "english": "Contend", "pronunciation": "Kon-ten" },
+    { "id": 690, "english": "Converge", "pronunciation": "Kon-verj" },
+    { "id": 691, "english": "Corrode", "pronunciation": "Ko-roud" },
+    { "id": 692, "english": "Counter", "pronunciation": "Kaun-ter" },
+    { "id": 693, "english": "Curb", "pronunciation": "Kerb" },
+    { "id": 694, "english": "Deceive", "pronunciation": "Di-siiv" },
+    { "id": 695, "english": "Decimate", "pronunciation": "De-si-meit" },
+    { "id": 696, "english": "Deconstruct", "pronunciation": "Dii-kon-strak" },
+    { "id": 697, "english": "Delegate", "pronunciation": "De-li-geit" },
+    { "id": 698, "english": "Delimit", "pronunciation": "Di-li-mit" },
+    { "id": 699, "english": "Demolish", "pronunciation": "Di-mo-lis" },
+    { "id": 700, "english": "Denounce", "pronunciation": "Di-nauns" },
+    { "id": 701, "english": "Deplete", "pronunciation": "Di-plit" },
+    { "id": 702, "english": "Deprive", "pronunciation": "Di-praiv" },
+    { "id": 703, "english": "Designate", "pronunciation": "De-zig-neit" },
+    { "id": 704, "english": "Detonate", "pronunciation": "De-to-neit" },
+    { "id": 705, "english": "Deviate", "pronunciation": "Di-vi-eit" },
+    { "id": 706, "english": "Devour", "pronunciation": "Di-vour" },
+    { "id": 707, "english": "Diagnose", "pronunciation": "Dai-eg-nouz" },
+    { "id": 708, "english": "Dignify", "pronunciation": "Dig-ni-fai" },
+    { "id": 709, "english": "Disband", "pronunciation": "Dis-ben" },
+    { "id": 710, "english": "Discredit", "pronunciation": "Dis-kre-dit" },
+    { "id": 711, "english": "Disengage", "pronunciation": "Dis-en-geij" },
+    { "id": 712, "english": "Disperse", "pronunciation": "Dis-pers" },
+    { "id": 713, "english": "Dispute", "pronunciation": "Dis-pyut" },
+    { "id": 714, "english": "Disrupt", "pronunciation": "Dis-rap" },
+    { "id": 715, "english": "Dissuade", "pronunciation": "Di-sweid" },
+    { "id": 716, "english": "Divert", "pronunciation": "Di-vert" },
+    { "id": 717, "english": "Elicit", "pronunciation": "I-li-sit" },
+    { "id": 718, "english": "Emancipate", "pronunciation": "I-man-si-peit" },
+    { "id": 719, "english": "Embark", "pronunciation": "Em-bark" },
+    { "id": 720, "english": "Enact", "pronunciation": "En-ak" },
+    { "id": 721, "english": "Encompass", "pronunciation": "En-kam-pas" },
+    { "id": 722, "english": "Entitle", "pronunciation": "En-tai-tel" },
+    { "id": 723, "english": "Equip", "pronunciation": "I-kwip" },
+    { "id": 724, "english": "Eradicate", "pronunciation": "I-ra-di-keit" },
+    { "id": 725, "english": "Escalate", "pronunciation": "Es-ke-leit" },
+    { "id": 726, "english": "Evacuate", "pronunciation": "I-va-kyu-eit" },
+    { "id": 727, "english": "Exacerbate", "pronunciation": "Eg-za-ser-beit" },
+    { "id": 728, "english": "Examine", "pronunciation": "Eg-za-min" },
+    { "id": 729, "english": "Exhaust", "pronunciation": "Eg-zos" },
+    { "id": 730, "english": "Expedite", "pronunciation": "Ek-spe-dait" },
+    { "id": 731, "english": "Explicate", "pronunciation": "Ek-spli-keit" },
+    { "id": 732, "english": "Extinguish", "pronunciation": "Ek-sting-gwis" },
+    { "id": 733, "english": "Facilitate", "pronunciation": "Fe-si-li-teit" },
+    { "id": 734, "english": "Falter", "pronunciation": "Fol-ter" },
+    { "id": 735, "english": "Fathom", "pronunciation": "Fa-dem" },
+    { "id": 736, "english": "Feign", "pronunciation": "Fein" },
+    { "id": 737, "english": "Ferry", "pronunciation": "Fe-ri" },
+    { "id": 738, "english": "Fetter", "pronunciation": "Fe-ter" },
+    { "id": 739, "english": "Fluctuate", "pronunciation": "Flak-cu-eit" },
+    { "id": 740, "english": "Forgo", "pronunciation": "For-gou" },
+    { "id": 741, "english": "Fortify", "pronunciation": "For-ti-fai" },
+    { "id": 742, "english": "Fossilize", "pronunciation": "Fo-si-laiz" },
+    { "id": 743, "english": "Fret", "pronunciation": "Fret" },
+    { "id": 744, "english": "Fulfill", "pronunciation": "Ful-fil" },
+    { "id": 745, "english": "Furl", "pronunciation": "Ferl" },
+    { "id": 746, "english": "Garner", "pronunciation": "Gar-ner" },
+    { "id": 747, "english": "Garnish", "pronunciation": "Gar-nis" },
+    { "id": 748, "english": "Gauze", "pronunciation": "Gouz" },
+    { "id": 749, "english": "Gauge", "pronunciation": "Geij" },
+    { "id": 750, "english": "Glisten", "pronunciation": "Gli-sen" },
+    { "id": 751, "english": "Govern", "pronunciation": "Ga-vern" },
+    { "id": 752, "english": "Graduate", "pronunciation": "Gra-dyu-eit" },
+    { "id": 753, "english": "Grasp", "pronunciation": "Grasp" },
+    { "id": 754, "english": "Grate", "pronunciation": "Gret" },
+    { "id": 755, "english": "Grumble", "pronunciation": "Gram-bel" },
+    { "id": 756, "english": "Haggle", "pronunciation": "Ha-gel" },
+    { "id": 757, "english": "Harness", "pronunciation": "Har-nes" },
+    { "id": 758, "english": "Hasten", "pronunciation": "Hei-sen" },
+    { "id": 759, "english": "Heed", "pronunciation": "Hiid" },
+    { "id": 760, "english": "Hinder", "pronunciation": "Hin-der" },
+    { "id": 761, "english": "Hoard", "pronunciation": "Hord" },
+    { "id": 762, "english": "Homogenize", "pronunciation": "Ho-mo-je-naiz" },
+    { "id": 763, "english": "Huddle", "pronunciation": "Ha-del" },
+    { "id": 764, "english": "Humiliate", "pronunciation": "Hyu-mi-li-eit" },
+    { "id": 765, "english": "Hypothesize", "pronunciation": "Hai-po-te-saiz" },
+    { "id": 766, "english": "Ignite", "pronunciation": "Ig-nait" },
+    { "id": 767, "english": "Imitate", "pronunciation": "I-mi-teit" },
+    { "id": 768, "english": "Impart", "pronunciation": "Im-part" },
+    { "id": 769, "english": "Impersonate", "pronunciation": "Im-per-se-neit" },
+    { "id": 770, "english": "Incite", "pronunciation": "In-sait" },
+    { "id": 771, "english": "Infiltrate", "pronunciation": "In-fil-treit" },
+    { "id": 772, "english": "Inflict", "pronunciation": "In-flik" },
+    { "id": 773, "english": "Infuriate", "pronunciation": "In-fyur-i-eit" },
+    { "id": 774, "english": "Instigate", "pronunciation": "In-sti-geit" },
+    { "id": 775, "english": "Insulate", "pronunciation": "In-syu-leit" },
+    { "id": 776, "english": "Integrate", "pronunciation": "In-te-greit" },
+    { "id": 777, "english": "Interject", "pronunciation": "In-ter-jek" },
+    { "id": 778, "english": "Intertwine", "pronunciation": "In-ter-twain" },
+    { "id": 779, "english": "Intoxicate", "pronunciation": "In-tok-si-keit" },
+    { "id": 780, "english": "Inundate", "pronunciation": "I-nan-deit" },
+    { "id": 781, "english": "Invert", "pronunciation": "In-vert" },
+    { "id": 782, "english": "Invoke", "pronunciation": "In-vouk" },
+    { "id": 783, "english": "Irradiate", "pronunciation": "I-re-di-eit" },
+    { "id": 784, "english": "Jettison", "pronunciation": "Je-ti-sen" },
+    { "id": 785, "english": "Jostle", "pronunciation": "Jos-sel" },
+    { "id": 786, "english": "Juxtapose", "pronunciation": "Jaks-ta-pouz" },
+    { "id": 787, "english": "Kin", "pronunciation": "Kin" },
+    { "id": 788, "english": "Knit", "pronunciation": "Nit" },
+    { "id": 789, "english": "Labor", "pronunciation": "Lei-ber" },
+    { "id": 790, "english": "Lament", "pronunciation": "La-men" },
+    { "id": 791, "english": "Lapse", "pronunciation": "Laps" },
+    { "id": 792, "english": "Lash", "pronunciation": "Las" },
+    { "id": 793, "english": "Legislate", "pronunciation": "Le-jis-leit" },
+    { "id": 794, "english": "Liberate", "pronunciation": "Li-be-reit" },
+    { "id": 795, "english": "Linger", "pronunciation": "Ling-ger" },
+    { "id": 796, "english": "Lobby", "pronunciation": "Lo-bi" },
+    { "id": 797, "english": "Loiter", "pronunciation": "Loi-ter" },
+    { "id": 798, "english": "Lull", "pronunciation": "Lal" },
+    { "id": 799, "english": "Lurch", "pronunciation": "Lerch" },
+    { "id": 800, "english": "Lure", "pronunciation": "Lur" },
+  
+    { "id": 801, "english": "Malfunction", "pronunciation": "Mal-fangk-syen" },
+    { "id": 802, "english": "Mandate", "pronunciation": "Man-deit" },
+    { "id": 803, "english": "Maneuver", "pronunciation": "Ma-nu-ver" },
+    { "id": 804, "english": "Marshal", "pronunciation": "Mar-sel" },
+    { "id": 805, "english": "Mediate", "pronunciation": "Mi-di-eit" },
+    { "id": 806, "english": "Mingle", "pronunciation": "Ming-gel" },
+    { "id": 807, "english": "Mitigate", "pronunciation": "Mi-ti-geit" },
+    { "id": 808, "english": "Mobilize", "pronunciation": "Mou-bi-laiz" },
+    { "id": 809, "english": "Mollify", "pronunciation": "Mo-li-fai" },
+    { "id": 810, "english": "Muster", "pronunciation": "Mas-ter" },
+    { "id": 811, "english": "Negotiate", "pronunciation": "Ni-gou-si-eit" },
+    { "id": 812, "english": "Obliterate", "pronunciation": "O-bli-te-reit" },
+    { "id": 813, "english": "Occupied", "pronunciation": "O-kyu-paid" },
+    { "id": 814, "english": "Officiate", "pronunciation": "O-fi-si-eit" },
+    { "id": 815, "english": "Orchestrate", "pronunciation": "Or-kes-treit" },
+    { "id": 816, "english": "Oust", "pronunciation": "Aust" },
+    { "id": 817, "english": "Pacify", "pronunciation": "Pa-si-fai" },
+    { "id": 818, "english": "Palpitate", "pronunciation": "Pal-pi-teit" },
+    { "id": 819, "english": "Parallel", "pronunciation": "Pa-ra-lel" },
+    { "id": 820, "english": "Pave", "pronunciation": "Peiv" },
+    { "id": 821, "english": "Perpetrate", "pronunciation": "Per-pe-treit" },
+    { "id": 822, "english": "Persevere", "pronunciation": "Per-si-viir" },
+    { "id": 823, "english": "Pioneer", "pronunciation": "Pai-o-nir" },
+    { "id": 824, "english": "Placate", "pronunciation": "Ple-keit" },
+    { "id": 825, "english": "Plunder", "pronunciation": "Plan-der" },
+    { "id": 826, "english": "Portray", "pronunciation": "Por-trei" },
+    { "id": 827, "english": "Prance", "pronunciation": "Prans" },
+    { "id": 828, "english": "Preach", "pronunciation": "Prich" },
+    { "id": 829, "english": "Preempt", "pronunciation": "Pri-em" },
+    { "id": 830, "english": "Preoccupy", "pronunciation": "Pri-o-kyu-pai" },
+    { "id": 831, "english": "Preside", "pronunciation": "Pri-said" },
+    { "id": 832, "english": "Proclaim", "pronunciation": "Pro-kleim" },
+    { "id": 833, "english": "Procure", "pronunciation": "Pro-kyur" },
+    { "id": 834, "english": "Profess", "pronunciation": "Pro-fes" },
+    { "id": 835, "english": "Prophesy", "pronunciation": "Pro-fe-sai" },
+    { "id": 836, "english": "Prune", "pronunciation": "Prun" },
+    { "id": 837, "english": "Qualify", "pronunciation": "Kwo-li-fai" },
+    { "id": 838, "english": "Quash", "pronunciation": "Kwos" },
+    { "id": 839, "english": "Quiver", "pronunciation": "Kwi-ver" },
+    { "id": 840, "english": "Rally", "pronunciation": "Ra-li" },
+    { "id": 841, "english": "Ransack", "pronunciation": "Ran-sak" },
+    { "id": 842, "english": "Rattle", "pronunciation": "Ra-tel" },
+    { "id": 843, "english": "Recede", "pronunciation": "Ri-siid" },
+    { "id": 844, "english": "Reclaim", "pronunciation": "Ri-kleim" },
+    { "id": 845, "english": "Rectify", "pronunciation": "Rek-ti-fai" },
+    { "id": 846, "english": "Redeem", "pronunciation": "Ri-dim" },
+    { "id": 847, "english": "Refine", "pronunciation": "Ri-fain" },
+    { "id": 848, "english": "Regain", "pronunciation": "Ri-gein" },
+    { "id": 849, "english": "Rehabilitate", "pronunciation": "Rii-ha-bi-li-teit" },
+    { "id": 850, "english": "Reign", "pronunciation": "Rein" },
+    { "id": 851, "english": "Reiterate", "pronunciation": "Rii-i-te-reit" },
+    { "id": 852, "english": "Relent", "pronunciation": "Ri-len" },
+    { "id": 853, "english": "Remedy", "pronunciation": "Re-me-di" },
+    { "id": 854, "english": "Reminisce", "pronunciation": "Re-mi-nis" },
+    { "id": 855, "english": "Replenish", "pronunciation": "Ri-ple-nis" },
+    { "id": 856, "english": "Reprimand", "pronunciation": "Re-pri-men" },
+    { "id": 857, "english": "Repulse", "pronunciation": "Ri-pals" },
+    { "id": 858, "english": "Rescind", "pronunciation": "Ri-sin" },
+    { "id": 859, "english": "Resonate", "pronunciation": "Re-zo-neit" },
+    { "id": 860, "english": "Respite", "pronunciation": "Res-pit" },
+    { "id": 861, "english": "Resume", "pronunciation": "Ri-syum" },
+    { "id": 862, "english": "Resurrect", "pronunciation": "Re-za-rek" },
+    { "id": 863, "english": "Scramble", "pronunciation": "Skram-bel" },
+    { "id": 864, "english": "Scrutinize", "pronunciation": "Sku-ti-naiz" },
+    { "id": 865, "english": "Shackle", "pronunciation": "Sha-kel" },
+    { "id": 866, "english": "Shed", "pronunciation": "Shed" },
+    { "id": 867, "english": "Shiver", "pronunciation": "Shi-ver" },
+    { "id": 868, "english": "Shudder", "pronunciation": "Sha-der" },
+    { "id": 869, "english": "Signify", "pronunciation": "Sig-ni-fai" },
+    { "id": 870, "english": "Slaughter", "pronunciation": "Slo-ter" },
+    { "id": 871, "english": "Snarl", "pronunciation": "Snarl" },
+    { "id": 872, "english": "Solicit", "pronunciation": "So-li-sit" },
+    { "id": 873, "english": "Speculate", "pronunciation": "Spe-kyu-leit" },
+    { "id": 874, "english": "Squabble", "pronunciation": "Skwo-bel" },
+    { "id": 875, "english": "Stifle", "pronunciation": "Stai-fel" },
+    { "id": 876, "english": "Stipulate", "pronunciation": "Sti-pyu-leit" },
+    { "id": 877, "english": "Submerge", "pronunciation": "Sab-merj" },
+    { "id": 878, "english": "Subvert", "pronunciation": "Sab-vert" },
+    { "id": 879, "english": "Summon", "pronunciation": "Sa-men" },
+    { "id": 880, "english": "Supplant", "pronunciation": "Sa-plen" },
+    { "id": 881, "english": "Surmise", "pronunciation": "Ser-maiz" },
+    { "id": 882, "english": "Swindle", "pronunciation": "Swin-del" },
+    { "id": 883, "english": "Tantalize", "pronunciation": "Tan-ta-laiz" },
+    { "id": 884, "english": "Taunt", "pronunciation": "Tont" },
+    { "id": 885, "english": "Thwart", "pronunciation": "Tort" },
+    { "id": 886, "english": "Topple", "pronunciation": "To-pel" },
+    { "id": 887, "english": "Torment", "pronunciation": "Tor-men" },
+    { "id": 888, "english": "Trample", "pronunciation": "Tram-pel" },
+    { "id": 889, "english": "Transfigure", "pronunciation": "Trans-fi-gur" },
+    { "id": 890, "english": "Transgress", "pronunciation": "Trans-gres" },
+    { "id": 891, "english": "Transmute", "pronunciation": "Trans-myut" },
+    { "id": 892, "english": "Tread", "pronunciation": "Tred" },
+    { "id": 893, "english": "Trigger", "pronunciation": "Tri-ger" },
+    { "id": 894, "english": "Triumph", "pronunciation": "Trai-amf" },
+    { "id": 895, "english": "Trivialise", "pronunciation": "Tri-vi-e-laiz" },
+    { "id": 896, "english": "Truncate", "pronunciation": "Trang-keit" },
+    { "id": 897, "english": "Underwrite", "pronunciation": "An-der-rait" },
+    { "id": 898, "english": "Undulate", "pronunciation": "An-dyu-leit" },
+    { "id": 899, "english": "Unfurl", "pronunciation": "An-ferl" },
+    { "id": 900, "english": "Unravel", "pronunciation": "An-ra-vel" },
+    { "id": 901, "english": "Uproot", "pronunciation": "Ap-rut" },
+    { "id": 902, "english": "Usurp", "pronunciation": "Yu-serp" },
+    { "id": 903, "english": "Vanish", "pronunciation": "Va-nis" },
+    { "id": 904, "english": "Veto", "pronunciation": "Vi-tou" },
+    { "id": 905, "english": "Vex", "pronunciation": "Veks" },
+    { "id": 906, "english": "Vindicate", "pronunciation": "Vin-di-keit" },
+    { "id": 907, "english": "Visualize", "pronunciation": "Vi-syu-a-laiz" },
+    { "id": 908, "english": "Wallow", "pronunciation": "Wo-lou" },
+    { "id": 909, "english": "Warp", "pronunciation": "Worp" },
+    { "id": 910, "english": "Waver", "pronunciation": "Wei-ver" },
+    { "id": 911, "english": "Whet", "pronunciation": "Wet" },
+    { "id": 912, "english": "Whirl", "pronunciation": "Werl" },
+    { "id": 913, "english": "Wilt", "pronunciation": "Wilt" },
+    { "id": 914, "english": "Wince", "pronunciation": "Wins" },
+    { "id": 915, "english": "Wrangle", "pronunciation": "Rang-gel" },
+    { "id": 916, "english": "Writhe", "pronunciation": "Raid" },
+    { "id": 917, "english": "Yell", "pronunciation": "Yel" },
+    { "id": 918, "english": "Yoke", "pronunciation": "Youk" },
+    { "id": 919, "english": "Zing", "pronunciation": "Zing" },
+    { "id": 920, "english": "Abolish", "pronunciation": "A-bo-lis" },
+    { "id": 921, "english": "Acquaint", "pronunciation": "A-kweint" },
+    { "id": 922, "english": "Adjourn", "pronunciation": "A-jern" },
+    { "id": 923, "english": "Admonish", "pronunciation": "Ad-mo-nis" },
+    { "id": 924, "english": "Allegiate", "pronunciation": "A-li-ji-eit" },
+    { "id": 925, "english": "Amalgamate", "pronunciation": "A-mal-ge-meit" },
+    { "id": 926, "english": "Annihilate", "pronunciation": "A-nai-e-leit" },
+    { "id": 927, "english": "Arouse", "pronunciation": "A-rauz" },
+    { "id": 928, "english": "Assuage", "pronunciation": "A-sweij" },
+    { "id": 929, "english": "Augment", "pronunciation": "Og-men" },
+    { "id": 930, "english": "Baffle", "pronunciation": "Ba-fel" },
+    { "id": 931, "english": "Belittle", "pronunciation": "Bi-li-tel" },
+    { "id": 932, "english": "Beseech", "pronunciation": "Bi-sich" },
+    { "id": 933, "english": "Blight", "pronunciation": "Blait" },
+    { "id": 934, "english": "Bode", "pronunciation": "Boud" },
+    { "id": 935, "english": "Brandish", "pronunciation": "Bran-dis" },
+    { "id": 936, "english": "Bridle", "pronunciation": "Brai-del" },
+    { "id": 937, "english": "Bungle", "pronunciation": "Bang-gel" },
+    { "id": 938, "english": "Cajole", "pronunciation": "Ka-joul" },
+    { "id": 939, "english": "Calibrate", "pronunciation": "Ka-li-breit" },
+    { "id": 940, "english": "Capitulate", "pronunciation": "Ka-pi-cu-leit" },
+    { "id": 941, "english": "Carve", "pronunciation": "Karv" },
+    { "id": 942, "english": "Chastise", "pronunciation": "Cas-taiz" },
+    { "id": 943, "english": "Cite", "pronunciation": "Sait" },
+    { "id": 944, "english": "Clutch", "pronunciation": "Klac" },
+    { "id": 945, "english": "Coalesce", "pronunciation": "Kou-a-les" },
+    { "id": 946, "english": "Cogitate", "pronunciation": "Ko-ji-teit" },
+    { "id": 947, "english": "Commiserate", "pronunciation": "Ko-mi-ze-reit" },
+    { "id": 948, "english": "Conceive", "pronunciation": "Kon-siiv" },
+    { "id": 949, "english": "Conciliate", "pronunciation": "Kon-si-li-eit" },
+    { "id": 950, "english": "Concur", "pronunciation": "Kon-ker" },
+    { "id": 951, "english": "Condone", "pronunciation": "Kon-doun" },
+    { "id": 952, "english": "Conflate", "pronunciation": "Kon-flet" },
+    { "id": 953, "english": "Conjecture", "pronunciation": "Kon-jek-cer" },
+    { "id": 954, "english": "Conscript", "pronunciation": "Kon-skrip" },
+    { "id": 955, "english": "Contrive", "pronunciation": "Kon-traiv" },
+    { "id": 956, "english": "Corroborate", "pronunciation": "Ko-ro-bo-reit" },
+    { "id": 957, "english": "Cower", "pronunciation": "Kau-er" },
+    { "id": 958, "english": "Delineate", "pronunciation": "Di-li-ni-eit" },
+    { "id": 959, "english": "Denigrate", "pronunciation": "De-ni-greit" },
+    { "id": 960, "english": "Deride", "pronunciation": "Di-raid" },
+    { "id": 961, "english": "Deter", "pronunciation": "Di-ter" },
+    { "id": 962, "english": "Deviate", "pronunciation": "Di-vi-eit" },
+    { "id": 963, "english": "Disdain", "pronunciation": "Dis-dein" },
+    { "id": 964, "english": "Disseminate", "pronunciation": "Di-se-mi-neit" },
+    { "id": 965, "english": "Dissipate", "pronunciation": "Di-si-peit" },
+    { "id": 966, "english": "Diverge", "pronunciation": "Di-verj" },
+    { "id": 967, "english": "Elicit", "pronunciation": "I-li-sit" },
+    { "id": 968, "english": "Elucidate", "pronunciation": "I-lu-si-deit" },
+    { "id": 969, "english": "Embellish", "pronunciation": "Em-be-lis" },
+    { "id": 970, "english": "Enumerate", "pronunciation": "I-nu-me-reit" },
+    { "id": 971, "english": "Epitomize", "pronunciation": "I-pi-to-maiz" },
+    { "id": 972, "english": "Eschew", "pronunciation": "Es-cu" },
+    { "id": 973, "english": "Exonerate", "pronunciation": "Eg-zo-ne-reit" },
+    { "id": 974, "english": "Expunge", "pronunciation": "Ek-spanj" },
+    { "id": 975, "english": "Extol", "pronunciation": "Ek-stol" },
+    { "id": 976, "english": "Foreshadow", "pronunciation": "For-sha-dou" },
+    { "id": 977, "english": "Foment", "pronunciation": "Fo-men" },
+    { "id": 978, "english": "Garnish", "pronunciation": "Gar-nis" },
+    { "id": 979, "english": "Gesticulate", "pronunciation": "Jes-ti-kyu-leit" },
+    { "id": 980, "english": "Hemorrhage", "pronunciation": "He-mo-rij" },
+    { "id": 981, "english": "Idiosyncrasy", "pronunciation": "I-di-o-sing-kra-si" },
+    { "id": 982, "english": "Immolate", "pronunciation": "I-mo-leit" },
+    { "id": 983, "english": "Impute", "pronunciation": "Im-pyut" },
+    { "id": 984, "english": "Incarcerate", "pronunciation": "In-kar-se-reit" },
+    { "id": 985, "english": "Incinerate", "pronunciation": "In-si-ne-reit" },
+    { "id": 986, "english": "Inculcate", "pronunciation": "In-kal-keit" },
+    { "id": 987, "english": "Indemnify", "pronunciation": "In-dem-ni-fai" },
+    { "id": 988, "english": "Infiltrate", "pronunciation": "In-fil-treit" },
+    { "id": 989, "english": "Infringe", "pronunciation": "In-frinj" },
+    { "id": 990, "english": "Inquire", "pronunciation": "In-kwair" },
+    { "id": 991, "english": "Insurgent", "pronunciation": "In-ser-jen" },
+    { "id": 992, "english": "Interrogate", "pronunciation": "In-te-ro-geit" },
+    { "id": 993, "english": "Inveigle", "pronunciation": "In-vei-gel" },
+    { "id": 994, "english": "Invoke", "pronunciation": "In-vouk" },
+    { "id": 995, "english": "Jubilate", "pronunciation": "Ju-bi-leit" },
+    { "id": 996, "english": "Lament", "pronunciation": "La-men" },
+    { "id": 997, "english": "Languish", "pronunciation": "Lang-gwis" },
+    { "id": 998, "english": "Legitimize", "pronunciation": "Le-ji-ti-maiz" },
+    { "id": 999, "english": "Leverage", "pronunciation": "Le-ve-rij" },
+    { "id": 1000, "english": "Liquidate", "pronunciation": "Li-kwi-deit" }
+];
+
+
+
+
+
+            
+            // Variabel Status Kuis
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let shuffledQuizData = []; 
+            let userAnswers = [];
+            
+            // Variabel Timer
+            let startTime;
+            let timerInterval;
+            
+            // 1. Variabel DOM Utama
+            const quizContainer = document.querySelector('.quiz-container');
+            const questionBox = document.getElementById('question-box');
+            const optionsArea = document.getElementById('options-area');
+            const timerDisplay = document.getElementById('quiz-timer');
+            const counter = document.getElementById('question-counter');
+            
+            // --- FUNGSI TIMER ---
+            function startTimer() {
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+
+            function updateTimer() {
+                const elapsed = Date.now() - startTime;
+                const totalSeconds = Math.floor(elapsed / 1000);
+                const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const seconds = String(totalSeconds % 60).padStart(2, '0');
+                timerDisplay.textContent = `Waktu: ${minutes}:${seconds}`;
+            }
+
+            function stopTimer() {
+                clearInterval(timerInterval);
+                const totalElapsed = Date.now() - startTime;
+                return Math.floor(totalElapsed / 1000); 
+            }
+
+            // --- FUNGSI UTAMA: MEMUAT SOAL ---
+            function loadQuestion() {
+                if (currentQuestionIndex >= shuffledQuizData.length) {
+                    showResults();
+                    return;
+                }
+
+                const currentItem = shuffledQuizData[currentQuestionIndex];
+                optionsArea.innerHTML = '';
+                
+                counter.textContent = `Soal ${currentQuestionIndex + 1} dari ${shuffledQuizData.length}`;
+                questionBox.textContent = currentItem.english;
+                
+                // Ambil distraktor (jawaban salah)
+                const incorrectOptions = vocabularyData
+                    .filter(item => item.id !== currentItem.id) 
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 3) 
+                    .map(item => ({ text: item.pronunciation, correct: false }));
+
+                // Gabungkan dan acak
+                const allOptions = [
+                    ...incorrectOptions, 
+                    { text: currentItem.pronunciation, correct: true }
+                ];
+                allOptions.sort(() => 0.5 - Math.random());
+
+                // Tampilkan Pilihan
+                allOptions.forEach(option => {
+                    const button = document.createElement('button');
+                    button.className = 'option-button';
+                    button.textContent = option.text;
+                    button.setAttribute('data-correct', option.correct);
+                    button.addEventListener('click', checkAnswer);
+                    optionsArea.appendChild(button);
+                });
+            }
+
+            // --- FUNGSI CEK JAWABAN (OTOMATIS LANJUT) ---
+            function checkAnswer(e) {
+                const selectedButton = e.target;
+                const isCorrect = selectedButton.getAttribute('data-correct') === 'true';
+                const currentQuestion = shuffledQuizData[currentQuestionIndex];
+
+                // Nonaktifkan semua tombol
+                document.querySelectorAll('.option-button').forEach(btn => {
+                    btn.classList.add('disabled');
+                    btn.removeEventListener('click', checkAnswer);
+                });
+                
+                // Beri feedback visual cepat
+                if (isCorrect) {
+                    selectedButton.style.backgroundColor = '#d1f7d1'; 
+                } else {
+                    selectedButton.style.backgroundColor = '#f8d7da'; 
+                }
+
+                // Simpan Jawaban
+                userAnswers.push({
+                    english: currentQuestion.english,
+                    correctPronunciation: currentQuestion.pronunciation,
+                    userSelected: selectedButton.textContent,
+                    isCorrect: isCorrect
+                });
+
+                if (isCorrect) {
+                    score++;
+                }
+
+                // Lanjut otomatis setelah jeda visual
+                currentQuestionIndex++;
+                setTimeout(loadQuestion, 500); 
+            }
+
+            // --- FUNGSI HASIL AKHIR ---
+            function showResults() {
+                const totalTimeSeconds = stopTimer();
+                const finalMinutes = String(Math.floor(totalTimeSeconds / 60)).padStart(2, '0');
+                const finalSeconds = String(totalTimeSeconds % 60).padStart(2, '0');
+                const totalQuestions = vocabularyData.length;
+
+                // Membangun tampilan hasil akhir
+                const resultsHTML = `
+                    <h2>🎉 Kuis Selesai! 🎉</h2>
+                    <p style="font-size: 1.5em;">Waktu Penyelesaian:</p>
+                    <p style="font-size: 2.5em; color: #17a2b8; margin: 0 0 10px 0;">
+                        ${finalMinutes}:${finalSeconds}
+                    </p>
+                    <p style="font-size: 1.5em; font-weight: bold;">Skor Akhir Anda:</p>
+                    <p style="font-size: 4em; color: ${score >= totalQuestions * 0.7 ? '#28a745' : '#dc3545'}; margin: 0;">
+                        ${score} / ${totalQuestions}
+                    </p>
+                    <p>${score >= totalQuestions * 0.7 ? 'Kerja bagus!' : 'Terus semangat belajar!'}</p>
+                    
+                    <button id="restart-button">Mulai Kuis Baru</button>
+
+                    <h3>Detail Jawaban:</h3>
+                    <div id="result-details"></div>
+                `;
+                
+                // Mengganti seluruh konten quiz-container
+                quizContainer.innerHTML = resultsHTML;
+
+                // Mengatasi error restart dengan reload halaman
+                document.getElementById('restart-button').addEventListener('click', () => {
+                    location.reload(); 
+                });
+
+                // Tampilkan rincian jawaban
+                const detailsArea = document.getElementById('result-details');
+                userAnswers.forEach((result, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `result-item ${result.isCorrect ? 'result-correct' : 'result-incorrect'}`;
+                    
+                    const statusIcon = result.isCorrect ? '✅' : '❌';
+                    
+                    itemDiv.innerHTML = `
+                        <strong>${statusIcon} Soal ${index + 1}:</strong> ${result.english}
+                        <br> 
+                        <span style="margin-left: 20px;">Jawaban Benar: ${result.correctPronunciation}</span>
+                        <br>
+                        <span style="margin-left: 20px;">Jawaban Anda: ${result.userSelected}</span>
+                    `;
+                    detailsArea.appendChild(itemDiv);
+                });
+            }
+
+            // --- INISIALISASI ---
+            function initQuiz() {
+                // Reset Variabel Status
+                shuffledQuizData = [...vocabularyData].sort(() => 0.5 - Math.random());
+                currentQuestionIndex = 0;
+                score = 0;
+                userAnswers = [];
+                
+                // Mulai Timer
+                startTimer();
+                
+                // Mulai Kuis
+                loadQuestion();
+            }
+
+            // Mulai kuis saat halaman pertama kali dimuat
+            initQuiz();
+        });
+    </script>
+
+</body>
+</html>
